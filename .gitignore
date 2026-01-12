@@ -36,3 +36,4 @@ test.db
 .env.*
 backend/ingestion/.env
 
+# Clean repository - secrets removed
