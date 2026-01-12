@@ -1,0 +1,177 @@
+
+
+
+An interface which is AI powered coach for your learning. And the whole interaction was designed by us. And recently the client said that one of the customers, very large IT services customers, they said that they only renewed the contract because of the AI coach and they found it very effective. So I think somewhere along like this is more like an investment advisor. AI investment advisor. Very similar. I think the concept is very similar. Right. You don't want to tell it and you want it to tell you that. Okay, this is. Now I think you know this is a good stock to buy. This is a not such a good stock to buy or something on the same lines. So we can start somewhere around that if that is okay. 
+P
+prakash nagarajan
+00:52
+Yeah, I will show you again. My expectation is see if I can show you something. Can you see it? Yeah, yeah. So this is our home screen, right. Where people can see. This is your whole family financial wealth management tool. Right? Global wealth management tool. Right now ultra HNIs who have hundreds of crores or 50s of millions, they have a family office for themselves, right? 
+S
+Sarthak Dudhara
+01:39
+Yeah. 
+P
+prakash nagarajan
+01:40
+And they their money through family office. What we are building is the same family office but for everyone digitally. Now it's not just investment advice because family office takes care of your estate planning, financial planning, taxation, insurance. It just covers everything about your wealth. Right, right. So investments is just one part of it. Okay. So that is how you can see this one, right. When, when you see here you can see your total global network. You can see your US net worth, you can see your India network and you can see your net worth in different currencies. You can go here, this is your own money. You go here you can add your wife and son and see if they have been working. They have accounts, they have pension, 401k or company stocks. So you can switch and see theirs. 
+P
+prakash nagarajan
+02:41
+So this is all at your family level, right. So and this is across all your asset classes, all your assets, all your loans and liabilities, everything will be here. Okay. Whether it is stocks and etf, crypto, real estate, bonds, doesn't matter, all loans, all credit cards. Right. Your entire family wealth and all of these are connected to the financial institutions. These are all real time and all institutions india and all institutions in US are connected to this platform. So you can, so then you can do lot of other things in between. You know, the platform is extensive in terms of how good is your portfolio, health, you know, what are the stocks you're holding and that's performance and blah blah, how is your score going up and you have many other insights like you need to improve your portfolio. 
+P
+prakash nagarajan
+03:36
+These are the things that you need to change and then you go and see the data, right? So a lot of these insights and you go and do your financial planning, right? You can go and add and then decide how much I want to achieve and what asset class I need to. So a lot of these things. So this is people looking for information, right? But if you look at these are the proactive insights, people will get auto insights, they will get an alert in their phone, right? And then they will open. They will land, they will land like this, right? They will land like this. So these are in, in chat GPT world you need to know what you want. So you want to go and ask, yeah, correct. 
+S
+Sarthak Dudhara
+04:31
+But that is different. Yeah. Here you want more proactive, correct? 
+P
+prakash nagarajan
+04:35
+For that you need to know what is good and bad and you need to know what to ask, right? Or you need to have some level of intellectual thing to ask, right? And many people in finance are not. Right? So it has, you should not wait for people to ask a question because they don't even know they are making mistakes, right? This is where this proactive auto insights comes into play. Hey, you have this poor quality, okay? This is a mid cap DSP fund is underperforming. These stocks are rated by analysts. So take action, right? So those kind of are, you know, you are missing some tax compliance, right? Or your expenses are going up on this category, right? Anything it may tell many things and then people want to understand more. Okay, now you're telling me this. 
+P
+prakash nagarajan
+05:24
+The stock is poor quality, like why I want to understand more, right? Then it tells you when you go here, then I can start the chat conversation with my AI assistant, right? This is one way, another way I generally want to chat, I can go and say, hey, can you review my portfolio? All right. Now it'll review like a financial advisor and tell you what you need to do, how you need to rebalance and many other things it'll tell you. But again here is, this is where I was telling you know, you need to know what to ask, right? And then we are providing across the platform variety of insights. Okay. 
+P
+prakash nagarajan
+06:11
+So you see here it kind of, okay, it'll recommend you how you should rebalance, what asset allocation you should do and which ones you say trim or exit, which ones you need to do tax harvesting, what sectors you need to rebalance. And you have certain financial goals like retirement goal, education, travel and all that. So it'll also tell you to achieve Your goals, how you need to structure your portfolio. Right. So this is what a financial advisor would do. Right. You can or more deeper and then ask about each things. It'll give you a plan and all of that. Right. This is all personalized for your portfolio, for your investment, for your family, for your risk profile. Right. It just. So my point is. 
+P
+prakash nagarajan
+07:08
+But these are all our traditional way where okay, user comes in, sees the insight or they don't see but they'll actually get alerts and then they come and open and all that. So it's proactive or they sign up, they see a lot of these insights. They come, okay, this is low quality, this is analysis or rating blah. So they'll see all that and then they start chatting and they have some tax saving strategies that are given here. Right. And lot more. This is just US country. Then you can switch to India and then you can do the same thing many analysis into all your Indian wealth. You can see and stuff like that here. But I'll not go too deep now. Keeping at a high level in many places people will see these kind of insights. Right? 
+P
+prakash nagarajan
+07:56
+Now suddenly when they see this insight now they have some question. Okay. Or you know, we are telling your portfolio health is like 6.54 now we are telling how is this calculated, right. And blah, blah, all of that. But I am thinking how can in the AI world, the whole app is kind of an AI led, right? 
+S
+Sarthak Dudhara
+08:24
+Yeah. 
+P
+prakash nagarajan
+08:25
+Not just, not just like chat, but something like new age, which people have not done something innovative. Right. I'm thinking traditionally all these apps show insights. People have to go and seek and search and look for insight. And then when they look at insight also they might get like so many questions in their mind. Right. And that's where they can't talk to a human expert. Right. But now you have an AI which can ask all, which can answer all your questions. Right. But how can we make it more interactive when they have questions or without them seeking, how can it be, you know, more like proactive, conversational, whatever. So that's what I'm looking at. Otherwise I don't have any other problem. 
+P
+prakash nagarajan
+09:14
+I want this whole the app experience like home screen for example, when I land in the AI world, is this how people should see the data and screen? 
+S
+Sarthak Dudhara
+09:27
+Correct. Yeah. 
+K
+Keerthish N G
+09:33
+Got it. I think. 
+S
+Sarthak Dudhara
+09:36
+Yeah, go ahead. No, no, go ahead. 
+K
+Keerthish N G
+09:37
+Sure. So, so couple of points. Like you rightly mentioned some early thoughts. Again, we can brainstorm through the right approaches and come back and share more insights. The literacy the digital literacy of people who use these apps will be different. 
+P
+prakash nagarajan
+09:53
+Right. 
+K
+Keerthish N G
+09:53
+A lot of times I as a user may not know what question I have to ask or at times I've interacted with the app, I know my portfolio quite well and what are the type of questions that I ask at that time can vary altogether. So how can we have that AI nudge through the various levels of proactive questions that as a user, for example, let's say I'm a new user, I, I see top five, six recommendations on the type of questions that I should be already be aware of in terms of my portfolio. 2 I, I am an intermediate user. I've been using this for almost 6 to 6 months to 12 months and I know certain basic aspects. But now I would like to get maximum out of the app altogether. Right. 
+K
+Keerthish N G
+10:35
+What type of insights would I get at that point in time to I'm a pro user and what type of insights do I look at that point in time? So we can look at various levels of these particular interaction as well to say what would matter to those users depending on what other users are also engaging on the app. Similarly, from a UX perspective, for the landing page, does this data even make sense for my user, for them to kind of be motivated to come back for more? Right. Just more than my network. What can I do? What can I take as an action that can help me move the needle better? Right. 
+K
+Keerthish N G
+11:12
+I think we can, what we can do is so we have not logged in or created an account, I presume there's a sign up option and we can create a test account and have access to this. Right. So that we can kind of review it once from our end, come up with possibly certain thoughts in terms of the directions that we can take that can lead into. So we'll not look at the tech feasibility as we'll first look at what are the possibilities that we can look at and then see from a tech perspective, how can we go about achieving that? So that is one approach that we can look at. 
+P
+prakash nagarajan
+11:48
+If that works for you. Yeah, yeah. So I wanted to understand so what kind of UX people experts or interaction or experience guys you have? I've been working with some industry experts. One of them is the ex Flipkart CTO is kind of my mentor and advisor on scaling consumer thing globally and whatnot. So I and him were discussing about this whole AI led user experience and then he was asking a Where can you find the best UX guys who can like think of something innovative in this Experience and then create some wow experience. 
+S
+Sarthak Dudhara
+12:51
+Okay, yeah, you've been doing, you know, the Greenfield AI projects are completely new, right? Like new kind of experience, thinking, even degreed. They had an own design team, but the CTO over there had a trust in us due to the past experiences that we had with him that okay, we will be able to bring something innovative and out of the box to the whole, you know, vision that he had in terms of execution, in terms of design execution. 
+S
+Sarthak Dudhara
+13:26
+And the only way I guess to see it forward is again, you know, we play it with the app and then we share some raw thoughts and just share with you the frequency at which we think the kind of new ideas that we can bring to the table and then you can, you know, once you feel that yes, you are good with it, I think we can decide to go forward in terms of us being at the forefront of understanding what AI is like. We also have a tech team, right. I know you have your own in house tech team and I'm not trying to upsell or anything, but because there is an in house tech team that builds AI agents, right now we are going through an activity of building AI agents agentic workflows for various use cases. 
+S
+Sarthak Dudhara
+14:22
+Some of them are our own preconceived agents which we'll be using internally and some of them are, you know, for existing clients and the designers are involved in building those agentic workflows. So they are already familiar with how to build with AI and for AI agentic experiences, how to build for it. So that is something we can leverage. This requires finance acumen. I think a little bit that thinking because I do a lot of finance planning for my own company and of course on a personal level I can think of 10 different things. So a designer who is savvy on that front will be a good fit for this project. 
+K
+Keerthish N G
+15:16
+I'd like to add two pointers here, Prakash. One is your question on from a UX perspective, code strength and so on. Right. So Bhakti. I don't know Sapik, if you're spoken about Bhakti and her background. Okay, so Bhakti is the other co founder that we have, Prakash. She comes with over close to two decades of experience now with designing for complex global products and numerous of them have won leading global awards across various regions. Right now she leads the entire design vertical. Altogether we have lead designers with over 10 plus years experience who have been with us for over 5, 6, 7 years in terms of building those particular complex product journeys over the last Two years. Obviously we have had a lot of requests coming in from an AI perspective on the chat. 
+K
+Keerthish N G
+16:09
+I have just shared with you a website link for a company called Resio. This is a Middle east based startup for whom we have built the entire of their AI experience. This is in the real estate space though. Now in this particular project basically we are helping to stake streamline the entire real estate process, right? From inquiries that are coming in so that you don't need manual agents answering them. You have your 24, seven AI agents that's answering all those particular queries, making sure we are able to facilitate faster deal progression. How can the AI bot basically help you to negotiate or increase the overall price of the entire property itself, right, by helping to upgrade, et cetera. So a lot of those things is what we have kind of built as an experience in this. There is WhatsApp integration, all of those, right. 
+K
+Keerthish N G
+17:02
+
+So for us the objective has been always about identifying and solving for those particular complex problem statements that we can kind of bring in our creativity angle. So that in a nutshell is what I want to share as a real live example. 
+So I've shared that website and just for your information, right, so we have a team that you know, works on finding what's new in AI and this article is very relevant to empowering finance through AI. So this is the kind of work that, you know, designers, when they have bandwidth, they work on, they try to do research on how can they transform certain industry with AI and then they share it with our marketing team, their insights and then it comes out as a nice article in our insights section from our website. So there is some good work that our team does in terms of being connected with, you know, this kind of ecosystem and I'll find out who worked on this from the team and then we can also see if they are a good fit here. 
+So basically we have, we do our homework like this, but we have bandwidth and we focus on, you know, finding how AI can build a difference in those domains. 
+Yeah, yeah. So I was trying to see this is looks simple yet it is not too complex. But then meet, you know, the expectation of what we are thinking through and all of that. So that's the part I was thinking. How do I we, you know, bridge the expectation, ensure we get what were envisioning. How do we, how do we try it out? Like for example, sometimes it may not work out right? Or if it works out, that's great. I wish, you know, we are able to find a very innovative Solution. All right. Yeah. So how do you want to approach this? 
+Pain points, right? I think in your mind, what are the main pain points? I could see some pain points already from what you showed. Like, for example, there was a whole bunch of suggestions. Rebalance your portfolio from this to this. Now, if I am the user, rebalancing the portfolio means like maybe 20 to 30 different actions, depending on the portfolio size. Even for the smallest portfolio, it will at least lead to five to six different actions. Like, even if there is two funds in there, because I have to find an alternate fund which, like, for me it's like, okay, just do it for me. I don't know what rebalancing means. Just do it for me. That is the kind of user experience I'm looking for. Right? Like, but it should gel with my risk appetite. It should know my risk appetite. 
+And based on that, it should connect and have me do the rebalancing. So coming back to that point, right, like, how can we find whether it will work or not? I think to start with, we have to define the pain points which you feel that the user has some of the pain points I just mentioned right now. Like, maybe there are more that you can think of. And there is, there may be some regulatory issues also. Like, I think regulations may not allow the algorithm to do everything on autopilot and still require human approvals or something in between. I don't know. I. I'm not very aware of the space in terms of regulatory requirements. But we can do the research and based on those boundaries, we can figure out right now, one is vision, another is pain points. 
+Based on those two guiding factors, we can go forward. I think that is how I am envisioning this whole thing works. And sometimes we have also ended up doing vision mockups, but those are for landing pages. It's very easy to do a vision mock up for a landing page. This is a little bit deeper than just a landing page kind of a problem. The only way I can probably ask you this in a different way because everyone builds the confidence in their head in a different way. So what will convince you with least amount of efforts from our side that yes, okay, let's move forward and engage in some particular way. I mean, what would, what are you exactly looking for? And we can address that. 
+So what I was looking for is, yeah, of course, you know, some auctions of mockups telling that, yeah, you know, today, you know, the user experience, user lands here. Okay, new user, this is what they see. Existing user, this is what they see. But this is how they are there. So the person, the customer's experience with AI, Right. Is this how it is today? But looking at the vision, looking at problem statements like here are some options, you can show a few options. We can then extend it and evolve it and all of that, whether we are going in the right direction in terms of the thought process. And then maybe one or two sample, wireframe, lo fi, whatever you want. Help us to visualize what is your thought process. 
+And we do like a UX audit maybe to start with for a particular couple of critical workflows, then show you some solutions for them. Honestly, arriving at a solution requires a little bit more. I mean if you want a proper solution, it requires proper design thinking and understanding the user, the problem statement and everything. But we can try to do a quick job at one or two saying, outlining the problems of these critical workflows and then suggesting couple of solutions to them. Does that make sense? 
+It does. We can also potentially look at something like a vision mockup or something. And that is just a direction of the thought process and not entirely the final approach that you take. It's just a possibility because generally when we build products, Prakash, we believe in co creation and you're not going to create magic and come back. But you will see this kind of evolving through the project phase because we will marry it with both your business vision and what we bring in from a creativity angle and then kind of put together the larger outcome. But we'll present certain possibilities and then we can kind of plan from that. 
+Yeah, yeah, we also try to, you know, look at things, you know, like how do you. So this is another article that our team worked on like building trust in AI through design. Because in the use case that you are referring to, I think because this is a money matter, user first needs to be absolutely trusting the bot, saying okay, yeah, I'm handling my financial decision making or at least having a copilot over there. I need to have trust. So how do you build, when you design for AI, how do you build that trust? The transparency and explainability, reliability, security, all these aspects. How do you, how do you ensure that you have in your design that you know, incorporate for your AI interactions? So lot of this, you know, again comes from our own experiences. 
+This is our very own internal voice agent that we keep experimenting with. It's called iris. And how we, you know, through such real use cases only we are writing these articles. So a lot of the stuff that we are talking about comes through actual concrete, real work behind the scenes that is done so that it comes out as a great experience for our clients when they work with us because then we know about what we are talking about. I think if you can share as the next steps, my suggestion would be if you can share login that will have some good amount of data in it for the designer to go and do a UX audit that would, that could be the first step. You want to show one sample UX audit. So Prakash kind of gets a picture of what he will get. 
+So that way I think yeah. And UX audits are generally complementary if they are just for one or two workflows. So you don't have to worry about anything in terms of commercials for that. But because they are not more than like. Because they are done in a complementary level, they. They will not be as comprehensive. But we will try to do a good job of communicating how will work on your problem. 
+Just one moment. 
+Remember I. In fact, you know Prakash, I'll tell you my story. I used to, I used an app called ET Money like two, three years ago. It gave me a suggestion saying hey, you are spending money on this direct on these regular mutual fund plans. You should switch to direct. And I said yeah, okay, switch to direct. And I click the button. And it did not tell me that there will be a tax liability. Like it is actually selling the direct plan units, sorry, the regular plan units. And it made the purchase of the regular plan units. But in the meantime I had a tax liability of that, you know, long term capital gains. I'm like, this is a shitty experience. And it was ET Money. Right. 
+So I think these kind of cases where they have empathy with the user situation must be covered. 
+Yeah. 
+I'll just give you a quick glimpse. This is for D2C brand india. This is their existing website. What you see, Nua, again, successful brand focusing towards women, healthcare for sanitary related aspects etc. They're doing quite well in tier 2 market right now, expanding big time and so on. So they approached us saying hey, we have a lot of customers but you want to reimagine the entire experience. What can we do? When they approached us, we did a quick vision mockup for them where we audited their current experience and came up with new solutions in terms of how they can reimagine the entire site experience. So we always try to first understand the brand itself of what is the brand trying to kind of bring in as a value proposition to the end clients. Right. 
+And then what are the future goals that they have. That is where Sartak was aligning upon what are the pain points that we are trying to solve for the user and from a brand perspective, what are the goals that you want to kind of achieve? And then we identified certain challenges. When we did the UX audit, for example, we saw that there were certain narrative rated challenges in this particular existing site. And the way it was. The data was kind of presented to the entire end audience. Right. So we tried to highlight those concerns, saying what are the concerns? And how it can be kind of addressed through across the site. Right. And then we came up with a newer approach saying how this can actually simplify the entire journey and how might we. 
+Is actually the possibilities in terms of what can we do to address this. These particular challenges that we are looking at. And similarly, one of the core factors there was how do we build emotional resonance with the brand altogether Right now that is where we said, okay, current things. What are the current challenges that we see? And then how do we go about fixing this in various particular. So typically this is what we try to do so that we look at possibilities and then we look at, okay, what really makes sense from a business perspective and then kind of arrive at the end of. I hope this gives you a quick glimpse. This obviously would be customized to your brand and your app experience what you have today. 
+So that is where if you have a test account login that has some degree of dummy data that's already there, that can help us to actually navigate through this really quick and demonstrate the right value. 
+Yeah, yeah. There is an demo account. We will give you an experience, but there are two things. Just a disclaimer there. The demo account, when you log in, it has all the data. Two use cases. One, how will the new user experience will be and how will be the existing user? Existing user who are managing all their accounts, that experience would be right. So we can. We can tell you when we give the demo account, you can see the second use case, which is the existing user experience. But for new user, when someone like signs up, how is the sign up and then the first landing screen or what will they do? I think that is like a separate. This thing, right? That you can only try on your own. 
+Yes, yes, that I can ask my team to actually sign up and go through that. 
+That is a different one. 
+Yeah, yeah. So. So Prakash, any eti and when you can share this particular demo access with us so that I can then kind of plan the next steps with my team internally. 
+Yeah, Demo access. Demo access for AI. I Think. Yeah, let me talk to my team. I need to just validate a couple of things from India. If you log into the demo account and switch to US country, whether you can access the AI assistant or not, something I need to validate with my team, I will validate. If there is nothing much is needed, then I'll give you access tomorrow. But if they need to do something, then it'll be end of this week. But yeah, either tomorrow or end of this week. In either case you will get the demo access. 
+Got it. And would WhatsApp group be the preferred communication channel? That would be. 
+Yeah, that's. 
+Right. Perfect. So we'll wait for that. Meanwhile, I'll still go ahead and brief the team about our conversation so that we can look into the signup journey, etc. But once you have shared the demo contacts, we'll be able to look into the post login existing customer experience and then come back to you with the thought process and next steps. 
+Okay? Okay. Okay. 
+Any other questions that you had for today that we can help address? 
+No. I assume you work on the project scope and as well as individual stuff like how what is your usual approach of working with the client? 
+So a lot of times when we build products, what we see is the product continues to evolve with time and we see that when we start the project to few weeks into the project, there are a lot of things that needs to be reprioritized or something new came up that we had to kind of look into it all together. Right. So our preferred approach of building products is we define a team structure and then the team continues to work on it where you have complete control in terms of changing the priorities, trying out newer things. A lot of times what we also do is we help build clickable prototypes that you can even validate with your end users, get early feedback even before you put them into the dev cycles. Right. So giving you that flexibility in terms of changing and chopping things. 
+So project model exists where the scope is crystal clear and defined and you're like, hey, these are the three workflows that is to be designed and that's pretty much it. Right. But when you need more R D and more exploration, it is more of a continuous retainer model that we kind of work towards. 
+Yeah. 
+So both the flexibilities exist with a lot of our existing clients. We go about even building the first version of the product, then we ramp down the team to keep it a lean team structure so they can continuously iterate newer ideations, test it out and then whenever they need to ramp up again then we are there to always ramp up if required. I hope that helps. Perfect. Thank you so much. It was wonderful meeting you today. You have a good rest of the evening. I'll share a quick summary of our conversation on email and then we'll take it ahead from there. 
+Sure. Thank you. Thanks. Have a great day. Bye. 
+Thank you. Bye. 
+Hey. Sorry. Last thing. We didn't talk about the NDA or anything, so. Do you have an NDA Prakash, that you want to share first before you share anything else or. 
+Yeah, I have an NDA. I. I'll try to share. Yeah. Yeah. 
+And I am the, you know person who is going to sign the NDA. So my email and all. You can send the e signature request to that directly. 
+Yeah. Yeah. No problem. Where are you based? Right. 
+No, I'm in Ahmedabad. 
+Oh, you're in Ahmedabad. Okay. And what about you, Kish? 
+Bangalore. 
+Bangalore. 
+I'm in Bangalore. Yes. 
+Okay. 
+Good. 
+Nice. Cool. 
+Thanks, Prakash. 
+Take care. 
+Bye. 
+
+
+
+Project Overview: InvestMates – AI-Powered Wealth Management AI-Driven Advisor: Acts as a smart financial coach for users and their families Global Portfolio Management: Supports real-time tracking across geographies (e.g., US, India) Family-Centric: Allows managing multiple family members’ financial journeys Full-Spectrum Services: Investment, tax optimization, estate planning, insurance, and more Proactive Notifications: Portfolio performance, tax alerts, spending insights, etc. Personalized Recommendations: Based on goals, risk appetite, and portfolio health AI Agent Workflows: Automates complex financial tasks using intelligent agents

@@ -1,0 +1,192 @@
+{
+    "productName": "Scatterplot",
+    "featureModules": [
+      {
+        "module": "Authentication & Access Control",
+        "features": [
+          {
+            "name": "Email-Based Account Creation",
+            "description": "Advisors sign up using name and work email"
+          },
+          {
+            "name": "OTP-Only Login",
+            "description": "Secure passwordless authentication using emailed OTP"
+          },
+          {
+            "name": "Strict Paywall",
+            "description": "Paid subscription required to access platform features"
+          },
+          {
+            "name": "Profile Identity Management",
+            "description": "Manage advisor profile fields and access settings"
+          }
+        ]
+      },
+      {
+        "module": "Advisor Branding",
+        "features": [
+          {
+            "name": "Firm Logo Branding",
+            "description": "Upload company logo to personalize charts and PDFs"
+          },
+          {
+            "name": "Brand Color Personalization",
+            "description": "Select brand color applied to charts and exports"
+          },
+          {
+            "name": "Disclosure Content",
+            "description": "Add custom disclosure text to appear in exports"
+          }
+        ]
+      },
+      {
+        "module": "Chart Library",
+        "features": [
+          {
+            "name": "Pre-Built Slide Gallery",
+            "description": "Browse 50 ready charts focused on economic and market topics"
+          },
+          {
+            "name": "Category-Based Organization",
+            "description": "Slides organized under predefined categories"
+          },
+          {
+            "name": "Slide Details Panel",
+            "description": "Displays as-of date and talking points"
+          },
+          {
+            "name": "Server-Rendered Charts",
+            "description": "Charts refreshed daily/monthly and stored as images"
+          }
+        ]
+      },
+      {
+        "module": "Slide Viewer & Presentation",
+        "features": [
+          {
+            "name": "Full-Screen Chart Viewer",
+            "description": "Magnified display for presentations and consumption"
+          },
+          {
+            "name": "Talking Points Overlay",
+            "description": "Pre-written guidance to help advisors explain the chart"
+          },
+          {
+            "name": "Dynamic Branding Application",
+            "description": "Charts displayed with advisor-specific branding"
+          }
+        ]
+      },
+      {
+        "module": "Deck Builder",
+        "features": [
+          {
+            "name": "Slide Selection",
+            "description": "Choose slides from library to add to a deck"
+          },
+          {
+            "name": "Deck Management",
+            "description": "Create, rename, delete up to 5 saved decks"
+          },
+          {
+            "name": "Auto-Updating Deck Content",
+            "description": "Decks automatically sync with latest data"
+          },
+          {
+            "name": "Deck Preview",
+            "description": "Review slides in deck before exporting"
+          }
+        ]
+      },
+      {
+        "module": "Export & Sharing",
+        "features": [
+          {
+            "name": "Single Slide PDF Export",
+            "description": "Export the currently viewed slide"
+          },
+          {
+            "name": "Deck PDF Export",
+            "description": "Multi-page branded PDF export of a custom deck"
+          },
+          {
+            "name": "Real-Time Data in Exports",
+            "description": "PDF generation uses latest data"
+          }
+        ]
+      },
+      {
+        "module": "Data Ingestion & Chart Processing",
+        "features": [
+          {
+            "name": "Automated Market Data Fetch",
+            "description": "Daily ingestion of market data from Finnhub"
+          },
+          {
+            "name": "Automated Economic Data Fetch",
+            "description": "Daily or monthly ingestion of FRED data"
+          },
+          {
+            "name": "Data Cleaning & Storage",
+            "description": "Pre-processed and stored for fast retrieval"
+          },
+          {
+            "name": "Scheduled Chart Rendering",
+            "description": "Daily updated images generated via server-side rendering"
+          }
+        ]
+      },
+      {
+        "module": "Admin Portal",
+        "features": [
+          {
+            "name": "Admin Dashboard",
+            "description": "User activity, subscription counts, growth metrics"
+          },
+          {
+            "name": "Slide Usage Insights",
+            "description": "Shows most utilized slides across users"
+          },
+          {
+            "name": "Marketing Email Export",
+            "description": "Download list of active user emails"
+          },
+          {
+            "name": "Homepage/CMS Controls",
+            "description": "Manage website content and newsletter settings"
+          },
+          {
+            "name": "Slide Metadata Editor",
+            "description": "Update chart titles, categorizations, and talking points"
+          }
+        ]
+      },
+      {
+        "module": "Security & Compliance",
+        "features": [
+          {
+            "name": "Full Encryption",
+            "description": "HTTPS transport and encrypted database storage"
+          },
+          {
+            "name": "Secure OTP & Abuse Prevention",
+            "description": "Secure generation and validation controls"
+          },
+          {
+            "name": "Access Logging",
+            "description": "Audit logs for admin access and key activity events"
+          }
+        ]
+      }
+    ],
+    "futureOpportunities": [
+      "Shareable web links for charts and decks",
+      "Advisor collaboration in deck editing",
+      "Chart recommendations based on usage",
+      "Upload client-specific data",
+      "Client engagement analytics",
+      "In-platform notifications",
+      "Mobile apps"
+    ]
+  }
+  

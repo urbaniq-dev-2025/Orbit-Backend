@@ -1,0 +1,97 @@
+version: "3.9"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: clarivo-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-orbit}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - clarivo-network
+
+  # Backend API Service
+  backend-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: clarivo/backend-api:latest
+    container_name: clarivo-backend-api
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-orbit}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-me-in-production}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRES_MINUTES=${ACCESS_TOKEN_EXPIRES_MINUTES:-30}
+      - REFRESH_TOKEN_EXPIRES_MINUTES=${REFRESH_TOKEN_EXPIRES_MINUTES:-10080}
+      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","http://127.0.0.1:3000"]}
+    env_file:
+      - ./backend/.env
+    ports:
+      - "${BACKEND_PORT:-8001}:8000"
+    volumes:
+      - ./backend/app:/app/app:ro
+      - ./backend/migrations:/app/migrations:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/health/live', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - clarivo-network
+
+  # Ingestion Service
+  ingestion-service:
+    build:
+      context: ./backend/ingestion
+      dockerfile: Dockerfile
+    image: clarivo/ingestion:latest
+    container_name: clarivo-ingestion
+    environment:
+      - APP_NAME=Clarivo Ingestion Service
+      - ENVIRONMENT=${INGESTION_ENVIRONMENT:-dev}
+      - DEBUG=${DEBUG:-true}
+      - CLARIFICATION_MIN_LENGTH=${CLARIFICATION_MIN_LENGTH:-500}
+    env_file:
+      - ./backend/ingestion/.env
+    ports:
+      - "${INGESTION_PORT:-8000}:8000"
+    volumes:
+      - ./backend/ingestion/clarivo_ingestion:/app/clarivo_ingestion:ro
+      - ./backend/ingestion/Input:/app/Input:ro
+      - ./backend/ingestion/Output:/app/Output
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/healthz', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - clarivo-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  clarivo-network:
+    driver: bridge
+

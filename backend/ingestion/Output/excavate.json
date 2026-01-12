@@ -1,0 +1,394 @@
+{
+    "productName": "ExcavAIte",
+    "productType": "Web Application - IP Management System",
+    "vision": "Integrated platform to manage the full IP lifecycle from invention disclosure to patent strategy, with AI-assisted tools for inventors, internal counsel, and executives.",
+    "primaryUserRoles": [
+      "Inventor",
+      "IP_Manager_Internal_Counsel",
+      "Executive_Head_of_IP_C_Suite"
+    ],
+    "recommendedTechStack": {
+      "frontend": "Next.js",
+      "backend": "Python",
+      "cloud": "AWS"
+    },
+    "modules": [
+      {
+        "name": "Branding & Design System",
+        "description": "Create a cohesive brand identity and reusable design system for the ExcavAIte web application.",
+        "features": [
+          {
+            "name": "Brand Identity",
+            "description": "Define core brand elements to be used across the product.",
+            "subfeatures": [
+              "Logo exploration (3 options, finalize 1)",
+              "Color palette definition",
+              "Typography scale and font pairing",
+              "Iconography style and library"
+            ]
+          },
+          {
+            "name": "Brand Book",
+            "description": "Document brand guidelines for consistent usage.",
+            "subfeatures": [
+              "Logo usage guidelines",
+              "Color and typography guidelines",
+              "Icon usage and style rules",
+              "Basic UI components examples",
+              "Brand tone and usage examples (up to 10 pages)"
+            ]
+          },
+          {
+            "name": "Design System Foundations",
+            "description": "Create reusable UI tokens and base components for the web app.",
+            "subfeatures": [
+              "Spacing, grid and layout system",
+              "Button variants (primary, secondary, destructive, ghost)",
+              "Form elements (inputs, dropdowns, textareas, toggles)",
+              "Status indicators, tags, badges and chips",
+              "Global theming support (light/dark ready, if in scope later)"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Core Platform & User Management",
+        "description": "Core web application shell, authentication, authorization, and role-based access control for all user types.",
+        "features": [
+          {
+            "name": "Authentication",
+            "description": "Secure login and onboarding for different user types.",
+            "subfeatures": [
+              "Email-based account creation",
+              "Secure login (password or SSO, TBD in discovery)",
+              "Password reset / recovery flow",
+              "Session management (JWT or similar token-based auth)",
+              "Account deactivation/reactivation (admin-controlled)"
+            ]
+          },
+          {
+            "name": "Role-Based Access Control (RBAC)",
+            "description": "Restrict features based on user role (Inventor, IP Manager, Executive).",
+            "subfeatures": [
+              "Role definitions and permissions matrix",
+              "Role assignment to users",
+              "Route-level and component-level access control",
+              "Audit log hooks for privileged actions (e.g., IP decisions)"
+            ]
+          },
+          {
+            "name": "Organization & Team Management",
+            "description": "Group users under organizations and teams for shared IP context.",
+            "subfeatures": [
+              "Organization profile (name, address, industry)",
+              "Invite users to organization via email",
+              "Assign roles within an organization",
+              "View members and roles",
+              "Basic usage/seat overview per organization"
+            ]
+          },
+          {
+            "name": "Global Navigation & Shell",
+            "description": "Top-level layout, navigation, and switching between main product areas.",
+            "subfeatures": [
+              "Primary navigation for Copilot, IP Manager, Mission Control",
+              "Secondary navigation (settings, help, profile)",
+              "Responsive layout for desktop and large tablets",
+              "Global search entry point (IP assets, documents, cases)",
+              "Notification center entry point (future extensibility)"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Copilot for Inventors",
+        "description": "AI-assisted workspace to help inventors document, refine, and submit invention disclosures.",
+        "features": [
+          {
+            "name": "Invention Disclosure Workspace",
+            "description": "Guided interface for creating structured invention disclosures.",
+            "subfeatures": [
+              "Create new invention disclosure",
+              "Guided sections (title, problem statement, solution, novelty, prior art, use cases, diagrams)",
+              "Autosave drafts and version history",
+              "Attach supporting files (documents, images, diagrams, code snippets)",
+              "Status indicator (draft, submitted, under review, accepted, rejected)"
+            ]
+          },
+          {
+            "name": "AI-Guided Authoring",
+            "description": "Copilot assistance to improve clarity, completeness, and patentability of disclosures.",
+            "subfeatures": [
+              "Contextual prompts per section (what to write, examples, hints)",
+              "Quality checks (completeness, clarity, novelty hints)",
+              "Suggestions for improving claim language (non-legal placeholder suggestions)",
+              "Highlighting of missing or weak sections",
+              "Explainability hints: why certain details are important for patentability"
+            ]
+          },
+          {
+            "name": "Prior Art & Similarity Check (Search Assist)",
+            "description": "Assist inventors by surfacing potentially similar patents or disclosures.",
+            "subfeatures": [
+              "Submit disclosure text to similarity search engine",
+              "Show list of potentially related patents/publications",
+              "Basic filters (jurisdiction, assignee, date)",
+              "Similarity score indicators",
+              "Save/attach selected references to disclosure for legal review"
+            ]
+          },
+          {
+            "name": "Submission & Collaboration with IP Manager",
+            "description": "Workflow for submitting the disclosure to internal counsel.",
+            "subfeatures": [
+              "Submit disclosure to IP Manager queue",
+              "Inventor notes to legal team (context, urgency, business use)",
+              "Comment thread for inventor–legal discussions",
+              "Change requests from IP Manager with tracked revisions",
+              "View current status and next steps for a disclosure"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "IP Manager for Internal Counsel",
+        "description": "Primary workspace for legal teams to triage, review, rank, and manage invention disclosures and patent-related workflows.",
+        "features": [
+          {
+            "name": "Disclosure Intake & Triage",
+            "description": "Queue and tools to manage incoming invention disclosures from inventors.",
+            "subfeatures": [
+              "Inbox of new disclosures with key metadata (inventor, date, department, tags)",
+              "Disclosure detail view (full content, attachments, prior art references)",
+              "Assign reviewer / owner from legal team",
+              "Set priority and status (new, under review, needs info, approved for filing, archived)",
+              "Tagging and categorization (technology area, business unit, product line)"
+            ]
+          },
+          {
+            "name": "Disclosure Evaluation & Ranking",
+            "description": "Support decision-making on which disclosures to pursue.",
+            "subfeatures": [
+              "Customizable evaluation criteria (novelty, commercial value, risk, strategic fit)",
+              "Scoring interface per criterion",
+              "Overall score and rank among disclosures",
+              "AI-assist suggestions on risk/novelty based on similarity search",
+              "Shortlist views (top candidates for filing, revisit later, low-priority)"
+            ]
+          },
+          {
+            "name": "Patent Filing Workflow Support",
+            "description": "High-level workflow tracking for disclosures moving towards patent applications.",
+            "subfeatures": [
+              "Flag disclosure as proceeding to patent filing",
+              "Capture filing decisions (jurisdictions, patent type, timeline notes)",
+              "Link to external patent counsel (if applicable, note-level integration)",
+              "Track statuses (pre-filing, drafted, filed, office-action, granted, abandoned)",
+              "Attach external documents (draft applications, office actions, responses)"
+            ]
+          },
+          {
+            "name": "Assertion Letter Response Support",
+            "description": "Specialized tools to support response workflows for assertion letters and infringement claims.",
+            "subfeatures": [
+              "Case intake: log assertion letter details (sender, date, patent(s), product(s) referenced)",
+              "Determine entity type (NPE vs competitor) using data lookup/API and internal rules",
+              "Check if company has previously filed suits on the patent (litigation history integration or data lookup)",
+              "Compare patent claims vs allegedly infringing product (text/semantic comparison assist)",
+              "Generate AI-assisted outlines for response or internal memo (not final legal advice)",
+              "Case status tracking (new, under analysis, responded, closed)"
+            ]
+          },
+          {
+            "name": "Unpublished IP Detection",
+            "description": "System to identify if documents contain potentially unpublished intellectual property.",
+            "subfeatures": [
+              "Upload or ingest documents (docs, PDFs, text, etc.)",
+              "Run unpublished IP detection analysis",
+              "Tunable sensitivity configuration (low/medium/high or numeric thresholds)",
+              "Highlight segments that may contain novel/unpublished IP",
+              "Flag documents that require legal review before external publication"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Mission Control for Executives",
+        "description": "High-level strategic dashboard for Heads of IP and C-suite to monitor IP portfolio health and risk.",
+        "features": [
+          {
+            "name": "Portfolio Overview Dashboard",
+            "description": "Top-level view of the company’s IP assets and pipeline.",
+            "subfeatures": [
+              "KPIs: number of disclosures, filings, grants, active cases",
+              "Pipeline breakdown by stage (disclosure, review, filing, granted)",
+              "Technology-area heatmap (where innovation is concentrated)",
+              "View by business unit / geography"
+            ]
+          },
+          {
+            "name": "Strategic Risk & Opportunity Insights",
+            "description": "Highlight risks, gaps, and opportunities in the IP portfolio.",
+            "subfeatures": [
+              "Highlight under-protected strategic product areas",
+              "Flag areas with heavy external assertion activity",
+              "Identify high-potential disclosures awaiting decisions",
+              "Trend analysis (filings over time, grants, abandonments)"
+            ]
+          },
+          {
+            "name": "Executive Reporting & Export",
+            "description": "Generate summaries and reports for leadership and board-level communication.",
+            "subfeatures": [
+              "Downloadable reports (PDF or CSV) of key metrics",
+              "Configurable reporting timeframes (quarterly, yearly, custom)",
+              "Executive summary generator (AI-assisted narrative over charts)",
+              "Saved report templates for recurring use"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "AI & Data Services Layer",
+        "description": "Shared AI/ML and data capabilities used by Copilot, IP Manager, and Mission Control.",
+        "features": [
+          {
+            "name": "Document & Image Embeddings",
+            "description": "Core embedding services to power semantic search and detection.",
+            "subfeatures": [
+              "Text embedding pipeline for disclosures, patents, documents",
+              "Image embedding pipeline for diagrams and figures",
+              "Vector index creation and maintenance",
+              "APIs for similarity search (top-K nearest neighbors)",
+              "Monitoring and logging of search relevance for refinement"
+            ]
+          },
+          {
+            "name": "Vector-Indexed Search",
+            "description": "Semantic search over internal and external datasets.",
+            "subfeatures": [
+              "Search across internal disclosures and IP assets",
+              "Search across external patent/publication datasets (where integrated)",
+              "Filter + facet search (by assignee, jurisdiction, date, tech area)",
+              "Ranking and scoring configuration",
+              "Search analytics (most searched queries, zero-result queries)"
+            ]
+          },
+          {
+            "name": "AI Inference Services",
+            "description": "Reusable AI service interfaces for all modules.",
+            "subfeatures": [
+              "Service for Copilot drafting and refinement",
+              "Service for unpublished IP detection scoring",
+              "Service for assertion letter analysis (claim vs product comparison)",
+              "Rate limiting, retries, and error handling for AI calls",
+              "Traceability for AI outputs (logs, prompts, responses) for auditability"
+            ]
+          },
+          {
+            "name": "External Data & API Integrations",
+            "description": "Services to integrate with external datasets and APIs.",
+            "subfeatures": [
+              "Integration with cloud document storage (S3 or similar)",
+              "Integration with patent/litigation data sources (exact providers TBD)",
+              "Configuration for API keys, secrets, and endpoints",
+              "Health checks and alerting for external integrations",
+              "Data ingestion jobs (scheduled/triggered) with monitoring"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Web Application UX & Frontend Delivery",
+        "description": "Front-end implementation of the product’s flows, using the branding and design system.",
+        "features": [
+          {
+            "name": "Responsive Web UI",
+            "description": "User-friendly interface built on Next.js.",
+            "subfeatures": [
+              "Responsive layouts for desktop and tablet usage",
+              "Accessible components (ARIA, keyboard navigation, contrast)",
+              "Loading, empty, and error states for major views",
+              "Global notifications/toasts for key actions",
+              "Consistent theming and design system usage"
+            ]
+          },
+          {
+            "name": "Global Search & Quick Actions (Phase-able)",
+            "description": "Entry point for cross-module navigation and lookup.",
+            "subfeatures": [
+              "Search bar to look up disclosures, cases, patents, and entities",
+              "Quick actions (create disclosure, open latest case, view dashboard)",
+              "Keyboard shortcuts for power users (configurable later)"
+            ]
+          },
+          {
+            "name": "Help & Onboarding",
+            "description": "Support features for new users to get started.",
+            "subfeatures": [
+              "Onboarding tour for each primary role (Inventor, IP Manager, Executive)",
+              "Contextual tooltips and help icons",
+              "Link to documentation or knowledge base",
+              "Feedback channel entry point (could integrate later with a ticketing system)"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Infrastructure, Security & Ops",
+        "description": "Backend infrastructure, deployment, observability, and security foundations on AWS.",
+        "features": [
+          {
+            "name": "Cloud Infrastructure Setup",
+            "description": "Base infra for a secure and scalable deployment on AWS.",
+            "subfeatures": [
+              "Environment setup (dev, staging, prod)",
+              "Compute setup (e.g., ECS/Lambda/EC2, TBD)",
+              "Managed database (RDS/DocumentDB or similar)",
+              "Object storage for documents and assets (S3)",
+              "VPC, networking, and security groups configuration"
+            ]
+          },
+          {
+            "name": "Security & Compliance Baseline",
+            "description": "Core security measures for protecting IP and user data.",
+            "subfeatures": [
+              "Authentication and authorization enforcement",
+              "Data encryption at rest and in transit",
+              "Secrets management (AWS Secrets Manager or SSM Parameter Store)",
+              "Role-based access policies in AWS (IAM)",
+              "Basic logging for security and access events"
+            ]
+          },
+          {
+            "name": "Monitoring, Logging & Alerting",
+            "description": "Operational observability for reliability and performance.",
+            "subfeatures": [
+              "Application logging (structured logs)",
+              "Metrics and dashboards (latency, error rates, usage)",
+              "Alerting on critical failures (API, ingestion, AI services)",
+              "Job monitoring for data pipelines and AI batch tasks",
+              "Basic cost monitoring and tagging for AWS resources"
+            ]
+          },
+          {
+            "name": "CI/CD Pipeline",
+            "description": "Automated build, test, and deployment pipeline.",
+            "subfeatures": [
+              "Automated builds for frontend and backend",
+              "Automated tests (unit and basic integration)",
+              "Staging deployments with smoke tests",
+              "Production deployment approvals and rollback strategy"
+            ]
+          }
+        ]
+      }
+    ],
+    "notes": [
+      "IP Manager is the primary feature for initial implementation.",
+      "Branding and design system should be completed early to guide UI work.",
+      "Workflows, evaluation criteria, and integration details will be refined during discovery workshops.",
+      "Long-term vision includes greater automation, but current focus is on augmenting human expertise at each stage of IP management."
+    ]
+  }
+  

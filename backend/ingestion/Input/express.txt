@@ -1,0 +1,59 @@
+Business objective
+Express ECG is a B2C healthcare company specializing in cardiac care by providing on demand ECG services. They have been doing this actively for more than 10 years. They have built a large network of doctors that makes this service easily accessible and quick. They have been operating on offline grounds and are targeting to move on to a tech solution oriented approach, making this service accessible to all by scaling it on a national level. 
+
+
+Scope
+To get started with, only a minimal amount of features are required for better usability and delivering the value. Vision is to create a cross platform mobile application that can handle all the use cases that are being covered offline.
+
+
+Features
+Onboarding
+Since lot of users are accessing the service offline by giving call on care number, they would receive link to install app on text message
+Users can install app from play store and app store
+Users can login by providing their contact number and OTP received on the same.
+Integrate google play instant for users who dont have app installed so that application can get launched once they receive link about the app.
+
+Dashboard
+The dashboard is where the user will land after logging in.
+The dashboard will have informative content like a checklist and a pre-recorded video (provided by client) explaining the symptoms to help decide whether the patient should wait for ECG to be done or need to rush to the hospital immediately.
+Patient/caretaker can give a call to public health centre/ drop a message on registered WhatsApp number/ call for technician through app in case of any cardiac related health issue.
+In cases of urgency, if the caretaker/patient chooses the hospital route, they will be given options for the nearest hospital.
+In cases where the symptoms are unclear to the patient, they will ask for ECG service.
+
+Request for ECG
+Once a user places a request for ECG, a technician will be assigned the case.
+Technicians will receive details about the user via a separate application.  (not in scope)
+Users can then track the status of technicians by seeing their live location and ETA.
+Verification of the technician is not required as such
+Once the technician is done with the ECG, they will submit the report to the doctor from the technician app.
+
+Profile 
+Since the login is OTP based, users should create a profile for themselves.
+Users can also create profiles of other family members as well.
+All the data of all members whose profile is created under one contact number can be accessible by logging in with that particular contact only.
+
+Reports
+Users can also upload their medical reports for the physician to check out.
+In case of multiple members added under this account, reports of all those users can be added by creating their individual profile.
+
+Payment 
+Once the user books technician for ECG, invoice will be generated and they will be redirected to the payment page.
+We can explore the option of integrating third party payment or even showing QR code for UPI payment will also work.Hence, design for the same wont be considered.
+
+Feedback
+Section meant to note user feedback.
+We can explore how we want to take note of the same.
+Feedback will be visible on the backend to the team so design for the same is not considered.
+
+Analytics
+Integrate any analytics tools like google analytics in order to analyse various aspects of the application and generate report about the same.
+
+
+
+
+
+
+
+
+
+

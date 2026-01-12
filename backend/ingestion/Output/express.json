@@ -1,0 +1,137 @@
+{
+    "productName": "Express ECG",
+    "businessObjective": "Digitize an existing offline cardiac ECG service into a national-scale on-demand mobile healthcare platform.",
+    "platform": "Cross-platform mobile app (Android + iOS + Play Instant support)",
+    "modules": [
+      {
+        "name": "Onboarding & Access",
+        "features": [
+          {
+            "name": "Install from shared link",
+            "description": "Users receive installation link via SMS when contacting customer care offline."
+          },
+          {
+            "name": "App Store Access",
+            "description": "Install via Play Store / App Store."
+          },
+          {
+            "name": "OTP Login",
+            "description": "Login with mobile number and OTP verification."
+          },
+          {
+            "name": "Google Play Instant Launch",
+            "description": "App experience launches instantly for users without installing fully."
+          }
+        ]
+      },
+      {
+        "name": "Dashboard & Triage Assistance",
+        "features": [
+          {
+            "name": "Emergency Information Hub",
+            "description": "Checklist and symptom-based guidance via video and educational content."
+          },
+          {
+            "name": "Multi-Action Emergency Contact",
+            "description": "Call PHC, send WhatsApp message, or request technician."
+          },
+          {
+            "name": "Hospital Suggestions",
+            "description": "Nearest hospital recommendations if symptoms suggest urgency."
+          },
+          {
+            "name": "ECG Request Entry Point",
+            "description": "Start workflow for service request if symptoms unclear."
+          }
+        ]
+      },
+      {
+        "name": "ECG Request & Technician Tracking",
+        "features": [
+          {
+            "name": "Request ECG",
+            "description": "User submits request for technician home visit."
+          },
+          {
+            "name": "Technician Assignment",
+            "description": "Backend assigns technician — technician app handles workflows (out of scope)."
+          },
+          {
+            "name": "Real-Time Tracking",
+            "description": "User sees technician live location + ETA on map."
+          },
+          {
+            "name": "Report Routing",
+            "description": "Technician completes ECG and sends results to doctor (tech app flow)."
+          }
+        ]
+      },
+      {
+        "name": "User & Family Profiles",
+        "features": [
+          {
+            "name": "My Profile",
+            "description": "Create personal profile after OTP login."
+          },
+          {
+            "name": "Family Member Profiles",
+            "description": "Add and manage profiles for relatives under same phone number."
+          },
+          {
+            "name": "Shared Data Access",
+            "description": "All profiles under one number visible after login."
+          }
+        ]
+      },
+      {
+        "name": "Medical Reports Management",
+        "features": [
+          {
+            "name": "Upload Reports",
+            "description": "Upload existing medical reports for doctor visibility."
+          },
+          {
+            "name": "Member-Wise Repository",
+            "description": "Reports categorized under each family member profile."
+          }
+        ]
+      },
+      {
+        "name": "Payment & Invoicing",
+        "features": [
+          {
+            "name": "Invoice Generation",
+            "description": "Auto-generated invoice after ECG booking."
+          },
+          {
+            "name": "Payment Handling",
+            "description": "Redirect to payment gateway or accept UPI via QR."
+          }
+        ]
+      },
+      {
+        "name": "Feedback Capture",
+        "features": [
+          {
+            "name": "Submit Feedback",
+            "description": "Users share post-service feedback. Visible in backend only."
+          }
+        ]
+      },
+      {
+        "name": "Analytics & Monitoring",
+        "features": [
+          {
+            "name": "Usage Analytics",
+            "description": "Integrate mobile analytics (e.g., Firebase/GA) for insights."
+          }
+        ]
+      }
+    ],
+    "scopeNotes": [
+      "Technician app functionality is out of scope (only integration point needed).",
+      "Payment design not required — only workflow and redirection.",
+      "Feedback view is backend-only; no UI complications needed."
+    ]
+  }
+  

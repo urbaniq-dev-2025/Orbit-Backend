@@ -1,0 +1,685 @@
+{
+    "executive_summary": {
+        "overview": "Mez App - A comprehensive mobile ordering and loyalty platform for coffee shops and cafes, enabling customers to browse menus, place orders, track status, earn rewards, and manage their profile preferences.",
+        "key_points": [
+            "Customer authentication via email, phone, Google, or Apple",
+            "Profile management with dietary preferences and preferred store selection",
+            "Menu browsing with modifiers, cart management, and order tracking",
+            "Payment integration with digital wallets and saved cards",
+            "Offers and promotions with targeted campaigns and promo codes",
+            "Rewards and loyalty program with points system and milestone rewards",
+            "Social media integration with follow buttons for Facebook, Instagram, and TikTok",
+            "Admin back office for menu, offers, and order management"
+        ]
+    },
+    "personas": [
+        {
+            "name": "Customer",
+            "description": "End user who orders food and beverages through the app",
+            "goals": [
+                "Quickly browse menu and place orders",
+                "Earn rewards and redeem benefits",
+                "Track order status in real-time",
+                "Save payment methods for faster checkout"
+            ],
+            "pain_points": [
+                "Long wait times at physical locations",
+                "Difficulty tracking loyalty points",
+                "Missing out on promotions and offers"
+            ]
+        },
+        {
+            "name": "Admin/Store Manager",
+            "description": "Back office user managing menu, offers, orders, and store operations",
+            "goals": [
+                "Manage menu items and pricing",
+                "Create and target promotional offers",
+                "Monitor incoming orders in real-time",
+                "Configure rewards and loyalty programs"
+            ],
+            "pain_points": [
+                "Manual order processing",
+                "Difficulty tracking customer engagement",
+                "Complex offer management"
+            ]
+        }
+    ],
+    "modules": [
+        {
+            "name": "Customer Profile",
+            "description": "User authentication and profile management",
+            "features": [
+                "Authentication",
+                "Profile Information",
+                "Account Management"
+            ]
+        },
+        {
+            "name": "Social Media Integration",
+            "description": "Integration with social media platforms for customer engagement",
+            "features": [
+                "Follow Us Links"
+            ]
+        },
+        {
+            "name": "Location & Stores",
+            "description": "Store location detection and selection",
+            "features": [
+                "Location Detection",
+                "Manual Store Selection",
+                "Store Information"
+            ]
+        },
+        {
+            "name": "Menu & Ordering",
+            "description": "Menu browsing, cart management, and order placement",
+            "features": [
+                "Browse Menu",
+                "Modifiers & Add-ons",
+                "Cart",
+                "Order Types",
+                "QR Code Scan",
+                "Order Tracking"
+            ]
+        },
+        {
+            "name": "Payment",
+            "description": "Payment processing and digital receipts",
+            "features": [
+                "Digital Wallets",
+                "Saved Cards",
+                "Secure Checkout",
+                "Digital Receipts"
+            ]
+        },
+        {
+            "name": "Offers & Promotions",
+            "description": "Promotional campaigns and discount management",
+            "features": [
+                "Generic Offers",
+                "Targeted Offers",
+                "Promo Codes",
+                "Auto-discounts"
+            ]
+        },
+        {
+            "name": "Rewards & Loyalty",
+            "description": "Loyalty program with points, rewards, and subscriptions",
+            "features": [
+                "Points System",
+                "Milestone Rewards",
+                "Wallet View",
+                "Subscription Passes",
+                "Merch Redemption Store"
+            ]
+        },
+        {
+            "name": "Notifications",
+            "description": "Push notifications for orders, promotions, and geofencing",
+            "features": [
+                "Order Notifications",
+                "Promotional Notifications",
+                "Geofencing Alerts"
+            ]
+        },
+        {
+            "name": "Support & Help",
+            "description": "Customer support and help resources",
+            "features": [
+                "Order History & Receipts",
+                "Help Center",
+                "Contact Support"
+            ]
+        },
+        {
+            "name": "Admin Back Office",
+            "description": "Administrative tools for store management",
+            "features": [
+                "Menu Management",
+                "Offer Management",
+                "Rewards Setup",
+                "Order Board",
+                "Store Integrations"
+            ]
+        }
+    ],
+    "features": [
+        {
+            "name": "Authentication",
+            "summary": "Multi-provider authentication supporting email, phone, Google, and Apple sign-in",
+            "priority": "P1",
+            "dependencies": [],
+            "acceptance_criteria": [
+                "User can sign up/login using email and password",
+                "User can sign up/login using phone number with OTP verification",
+                "User can sign up/login using Google account",
+                "User can sign up/login using Apple ID",
+                "Session persists across app restarts"
+            ]
+        },
+        {
+            "name": "Profile Information",
+            "summary": "User profile with personal details, contact info, preferred store, and dietary preferences",
+            "priority": "P1",
+            "dependencies": ["Authentication"],
+            "acceptance_criteria": [
+                "User can view and edit name and contact information",
+                "User can select and save preferred store",
+                "User can set dietary preferences (allergies, restrictions, etc.)",
+                "Profile information is saved and synced across devices"
+            ]
+        },
+        {
+            "name": "Account Management",
+            "summary": "Account settings including profile editing, password changes, and account deletion",
+            "priority": "P2",
+            "dependencies": ["Authentication"],
+            "acceptance_criteria": [
+                "User can edit profile information",
+                "User can change password",
+                "User can delete account with confirmation",
+                "Account deletion removes all user data"
+            ]
+        },
+        {
+            "name": "Follow Us Links",
+            "summary": "Social media integration with follow buttons linking to Facebook, Instagram, and TikTok pages",
+            "priority": "P2",
+            "dependencies": [],
+            "acceptance_criteria": [
+                "App displays follow buttons for Facebook, Instagram, and TikTok",
+                "Buttons link to respective social media pages",
+                "Links open in external browser or app",
+                "Buttons are accessible from customer profile section"
+            ]
+        },
+        {
+            "name": "Location Detection",
+            "summary": "Automatic location detection to suggest nearest store",
+            "priority": "P1",
+            "dependencies": [],
+            "acceptance_criteria": [
+                "App requests location permissions on first launch",
+                "App detects user's current location",
+                "App suggests nearest store based on location",
+                "User can accept or reject location-based suggestions"
+            ]
+        },
+        {
+            "name": "Manual Store Selection",
+            "summary": "Manual store selection from available locations",
+            "priority": "P1",
+            "dependencies": [],
+            "acceptance_criteria": [
+                "User can view list of all available stores",
+                "User can search stores by name or location",
+                "User can select a store manually",
+                "Selected store is saved as preferred store"
+            ]
+        },
+        {
+            "name": "Store Information",
+            "summary": "Display store details including hours, status, and contact information",
+            "priority": "P1",
+            "dependencies": [],
+            "acceptance_criteria": [
+                "App displays store hours for selected store",
+                "App shows open/closed status in real-time",
+                "App displays store contact details",
+                "Store information updates automatically"
+            ]
+        },
+        {
+            "name": "Browse Menu",
+            "summary": "Menu browsing with pictures, prices, categories, and descriptions",
+            "priority": "P1",
+            "dependencies": ["Location & Stores"],
+            "acceptance_criteria": [
+                "User can browse menu items organized by categories",
+                "Each item displays picture, name, price, and description",
+                "Menu items can be filtered by category",
+                "Menu reflects current availability and pricing"
+            ]
+        },
+        {
+            "name": "Modifiers & Add-ons",
+            "summary": "Customization options for menu items including size, milk type, and flavors",
+            "priority": "P1",
+            "dependencies": ["Browse Menu"],
+            "acceptance_criteria": [
+                "User can select size options (small, medium, large)",
+                "User can choose milk type (whole, skim, almond, etc.)",
+                "User can add flavors and syrups",
+                "Price updates reflect selected modifiers"
+            ]
+        },
+        {
+            "name": "Cart",
+            "summary": "Shopping cart with real-time pricing, notes, and tip options",
+            "priority": "P1",
+            "dependencies": ["Browse Menu"],
+            "acceptance_criteria": [
+                "User can add items to cart",
+                "Cart displays real-time total including modifiers",
+                "User can add special instructions/notes per item",
+                "User can add tip before checkout",
+                "Cart persists across app sessions"
+            ]
+        },
+        {
+            "name": "Order Types",
+            "summary": "Support for pickup and dine-in order types",
+            "priority": "P1",
+            "dependencies": ["Cart"],
+            "acceptance_criteria": [
+                "User can select pickup or dine-in order type",
+                "Pickup orders show estimated ready time",
+                "Dine-in orders can include table number",
+                "Order type affects pricing and preparation time"
+            ]
+        },
+        {
+            "name": "QR Code Scan",
+            "summary": "QR code scanning to auto-open app with table and store context",
+            "priority": "P2",
+            "dependencies": ["Browse Menu"],
+            "acceptance_criteria": [
+                "App can scan QR codes from tables",
+                "QR code automatically sets store and table context",
+                "App opens directly to menu for that store",
+                "Table number is pre-filled for dine-in orders"
+            ]
+        },
+        {
+            "name": "Order Tracking",
+            "summary": "Real-time order status tracking with queued, preparing, and ready states",
+            "priority": "P1",
+            "dependencies": ["Order Types"],
+            "acceptance_criteria": [
+                "User receives notification when order is queued",
+                "User can see order status: Queued, Preparing, Ready",
+                "Status updates in real-time",
+                "User receives notification when order is ready"
+            ]
+        },
+        {
+            "name": "Digital Wallets",
+            "summary": "Payment via Apple Pay and Google Pay",
+            "priority": "P1",
+            "dependencies": ["Cart"],
+            "acceptance_criteria": [
+                "User can pay using Apple Pay on iOS devices",
+                "User can pay using Google Pay on Android devices",
+                "Payment is processed securely",
+                "Transaction confirmation is displayed"
+            ]
+        },
+        {
+            "name": "Saved Cards",
+            "summary": "Save and use credit/debit cards for faster checkout",
+            "priority": "P1",
+            "dependencies": ["Cart"],
+            "acceptance_criteria": [
+                "User can save credit/debit card information",
+                "Saved cards are encrypted and stored securely",
+                "User can select saved card for checkout",
+                "User can add, edit, or remove saved cards"
+            ]
+        },
+        {
+            "name": "Secure Checkout",
+            "summary": "Secure payment processing with encryption",
+            "priority": "P1",
+            "dependencies": ["Cart"],
+            "acceptance_criteria": [
+                "All payment data is encrypted in transit",
+                "Payment processing follows PCI DSS compliance",
+                "User receives payment confirmation",
+                "Failed payments show clear error messages"
+            ]
+        },
+        {
+            "name": "Digital Receipts",
+            "summary": "Digital receipt generation and storage",
+            "priority": "P1",
+            "dependencies": ["Secure Checkout"],
+            "acceptance_criteria": [
+                "Receipt is generated automatically after payment",
+                "Receipt includes order details, items, and total",
+                "Receipt can be viewed in order history",
+                "Receipt can be emailed or saved"
+            ]
+        },
+        {
+            "name": "Generic Offers",
+            "summary": "General promotional offers like happy hour and seasonal promotions",
+            "priority": "P2",
+            "dependencies": ["Browse Menu"],
+            "acceptance_criteria": [
+                "App displays generic offers (happy hour, seasonal)",
+                "Offers show discount amount or percentage",
+                "Offers have start and end dates",
+                "Discounts are automatically applied at checkout"
+            ]
+        },
+        {
+            "name": "Targeted Offers",
+            "summary": "Personalized offers for new users, lapsed users, or based on past orders",
+            "priority": "P2",
+            "dependencies": ["Customer Profile"],
+            "acceptance_criteria": [
+                "New users receive welcome offers",
+                "Lapsed users receive re-engagement offers",
+                "Offers are personalized based on order history",
+                "Targeted offers appear in notifications and app"
+            ]
+        },
+        {
+            "name": "Promo Codes",
+            "summary": "Promotional code system for discounts",
+            "priority": "P2",
+            "dependencies": ["Cart"],
+            "acceptance_criteria": [
+                "User can enter promo code at checkout",
+                "System validates promo code",
+                "Discount is applied if code is valid",
+                "Invalid codes show error message"
+            ]
+        },
+        {
+            "name": "Auto-discounts",
+            "summary": "Automatic discount application based on rules",
+            "priority": "P2",
+            "dependencies": ["Cart"],
+            "acceptance_criteria": [
+                "Discounts are automatically applied when conditions are met",
+                "User can see applied discounts in cart",
+                "Discount rules are configurable by admin",
+                "Multiple discounts can stack if allowed"
+            ]
+        },
+        {
+            "name": "Points System",
+            "summary": "Earn and redeem points on purchases",
+            "priority": "P1",
+            "dependencies": ["Secure Checkout"],
+            "acceptance_criteria": [
+                "User earns points on each purchase",
+                "Points are calculated based on purchase amount",
+                "User can redeem points for rewards",
+                "Point balance is displayed in wallet"
+            ]
+        },
+        {
+            "name": "Milestone Rewards",
+            "summary": "Rewards for reaching purchase milestones (e.g., free 10th order per month)",
+            "priority": "P2",
+            "dependencies": ["Points System"],
+            "acceptance_criteria": [
+                "System tracks number of orders per month",
+                "User receives reward on 10th order of the month",
+                "Milestone progress is displayed to user",
+                "Reward is automatically applied"
+            ]
+        },
+        {
+            "name": "Wallet View",
+            "summary": "View points balance, rewards, and transaction history",
+            "priority": "P1",
+            "dependencies": ["Points System"],
+            "acceptance_criteria": [
+                "User can view current points balance",
+                "User can view available rewards",
+                "User can view points and rewards history",
+                "History shows transactions and redemptions"
+            ]
+        },
+        {
+            "name": "Subscription Passes",
+            "summary": "Monthly subscription passes (e.g., monthly coffee pass)",
+            "priority": "P2",
+            "dependencies": ["Payment"],
+            "acceptance_criteria": [
+                "User can purchase monthly subscription pass",
+                "Pass provides benefits (e.g., daily coffee)",
+                "Pass auto-renews monthly",
+                "User can cancel subscription"
+            ]
+        },
+        {
+            "name": "Merch Redemption Store",
+            "summary": "Store for redeeming rewards for merchandise",
+            "priority": "P3",
+            "dependencies": ["Points System"],
+            "acceptance_criteria": [
+                "User can browse available merchandise",
+                "User can redeem points for merchandise",
+                "Merchandise availability is tracked",
+                "Redemption orders are processed separately"
+            ]
+        },
+        {
+            "name": "Order Notifications",
+            "summary": "Push notifications for order status updates",
+            "priority": "P1",
+            "dependencies": ["Order Tracking"],
+            "acceptance_criteria": [
+                "User receives notification when order is placed",
+                "User receives notification when order status changes",
+                "User receives notification when order is ready",
+                "Notifications can be enabled/disabled in settings"
+            ]
+        },
+        {
+            "name": "Promotional Notifications",
+            "summary": "Notifications for offers, menu alerts, and loyalty reminders",
+            "priority": "P2",
+            "dependencies": [],
+            "acceptance_criteria": [
+                "User receives notifications for new offers",
+                "User receives menu update alerts",
+                "User receives loyalty program reminders",
+                "User can customize notification preferences"
+            ]
+        },
+        {
+            "name": "Geofencing Alerts",
+            "summary": "Notifications when user is near a store",
+            "priority": "P2",
+            "dependencies": ["Location Detection"],
+            "acceptance_criteria": [
+                "App detects when user enters geofence around store",
+                "User receives notification when near store",
+                "Notification can include current offers",
+                "Geofencing can be enabled/disabled"
+            ]
+        },
+        {
+            "name": "Order History & Receipts",
+            "summary": "View past orders and access digital receipts",
+            "priority": "P1",
+            "dependencies": ["Digital Receipts"],
+            "acceptance_criteria": [
+                "User can view list of past orders",
+                "Each order shows date, items, and total",
+                "User can view receipt for each order",
+                "Orders can be filtered by date range"
+            ]
+        },
+        {
+            "name": "Help Center",
+            "summary": "Self-service help center with FAQs and guides",
+            "priority": "P2",
+            "dependencies": [],
+            "acceptance_criteria": [
+                "Help center displays FAQs",
+                "User can search help articles",
+                "Help center includes app usage guides",
+                "Content is organized by topic"
+            ]
+        },
+        {
+            "name": "Contact Support",
+            "summary": "Contact support via WhatsApp chat",
+            "priority": "P2",
+            "dependencies": [],
+            "acceptance_criteria": [
+                "User can initiate WhatsApp chat with support",
+                "Chat opens WhatsApp with pre-filled message",
+                "Support team can respond via WhatsApp",
+                "Chat history is accessible"
+            ]
+        },
+        {
+            "name": "Menu Management",
+            "summary": "Admin tools for editing menu items, updating prices, and setting availability",
+            "priority": "P1",
+            "dependencies": [],
+            "acceptance_criteria": [
+                "Admin can add, edit, or remove menu items",
+                "Admin can update item prices",
+                "Admin can set item availability (in stock/out of stock)",
+                "Changes sync to app in real-time"
+            ]
+        },
+        {
+            "name": "Offer Management",
+            "summary": "Create and manage promotional offers with targeting rules",
+            "priority": "P1",
+            "dependencies": [],
+            "acceptance_criteria": [
+                "Admin can create new promotional offers",
+                "Admin can set targeting rules (new users, lapsed users, etc.)",
+                "Admin can set offer start and end dates",
+                "Admin can view offer performance metrics"
+            ]
+        },
+        {
+            "name": "Rewards Setup",
+            "summary": "Configure points rules and milestone reward settings",
+            "priority": "P1",
+            "dependencies": [],
+            "acceptance_criteria": [
+                "Admin can configure points earning rules",
+                "Admin can set milestone reward thresholds",
+                "Admin can create and manage reward items",
+                "Reward rules can be updated"
+            ]
+        },
+        {
+            "name": "Order Board",
+            "summary": "Real-time view of incoming orders",
+            "priority": "P1",
+            "dependencies": [],
+            "acceptance_criteria": [
+                "Admin can view all incoming orders in real-time",
+                "Orders are displayed in chronological order",
+                "Order status can be updated from board",
+                "Board shows order details and customer info"
+            ]
+        },
+        {
+            "name": "Store Integrations",
+            "summary": "Integration with POS system and WhatsApp for order queries",
+            "priority": "P1",
+            "dependencies": [],
+            "acceptance_criteria": [
+                "Orders from app are sent to POS system",
+                "POS system can update order status",
+                "WhatsApp integration for order queries",
+                "Integration supports multiple stores"
+            ]
+        }
+    ],
+    "functional_requirements": [
+        {
+            "statement": "The app must support authentication via email, phone, Google, and Apple"
+        },
+        {
+            "statement": "Users must be able to set dietary preferences in their profile"
+        },
+        {
+            "statement": "The app must detect user location and suggest nearest store"
+        },
+        {
+            "statement": "Menu items must support customization with modifiers (size, milk type, flavors)"
+        },
+        {
+            "statement": "Orders must support both pickup and dine-in types"
+        },
+        {
+            "statement": "The app must provide real-time order tracking with status updates"
+        },
+        {
+            "statement": "Payment must support digital wallets (Apple Pay, Google Pay) and saved cards"
+        },
+        {
+            "statement": "The app must generate and store digital receipts for all orders"
+        },
+        {
+            "statement": "The app must support promo codes and automatic discount application"
+        },
+        {
+            "statement": "Users must earn points on purchases and be able to redeem rewards"
+        },
+        {
+            "statement": "The app must send push notifications for order status and promotions"
+        },
+        {
+            "statement": "Admin must be able to manage menu items, prices, and availability"
+        },
+        {
+            "statement": "Admin must be able to create targeted offers for different user segments"
+        },
+        {
+            "statement": "Orders from app must integrate with POS system"
+        }
+    ],
+    "technical_requirements": [
+        {
+            "statement": "Social Media Integration: Links to Facebook, Instagram, TikTok pages → \"Follow Us\" buttons inside the app linked to customer profiles"
+        },
+        {
+            "statement": "Payment processing must comply with PCI DSS standards"
+        },
+        {
+            "statement": "Location services must request and handle permissions appropriately"
+        },
+        {
+            "statement": "Push notifications must work on both iOS and Android platforms"
+        },
+        {
+            "statement": "QR code scanning must work on both iOS and Android"
+        },
+        {
+            "statement": "App must integrate with POS system via API"
+        },
+        {
+            "statement": "WhatsApp integration must use WhatsApp Business API"
+        },
+        {
+            "statement": "User data must be encrypted in transit and at rest"
+        },
+        {
+            "statement": "App must support offline mode for viewing menu and order history"
+        }
+    ],
+    "non_functional_requirements": [
+        {
+            "statement": "App must load menu within 2 seconds on standard 4G connection"
+        },
+        {
+            "statement": "Order placement must complete within 5 seconds"
+        },
+        {
+            "statement": "App must support at least 1000 concurrent users per store"
+        },
+        {
+            "statement": "App must be available 99.9% of the time"
+        },
+        {
+            "statement": "App must support iOS 14+ and Android 8+"
+        }
+    ],
+    "open_questions": []
+}

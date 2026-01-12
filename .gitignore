@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDEs
+.vscode/
+.idea/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Docker
+*.log
+docker-data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project
+Documents/*
+!Documents/.gitkeep
+test.db
+.env
+.env.*
+backend/ingestion/.env
+

@@ -1,0 +1,4 @@
+Alembic migrations for the Orbit backend.
+
+Use `alembic -c backend/alembic.ini revision --autogenerate -m "message"` to create new migrations, and `alembic -c backend/alembic.ini upgrade head` to apply.
+

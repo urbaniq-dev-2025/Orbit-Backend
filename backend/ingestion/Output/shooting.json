@@ -1,0 +1,109 @@
+{
+    "modules": [
+      {
+        "name": "Foundation Setup",
+        "features": [
+          { "name": "CI/CD Setup" },
+          { "name": "AWS Project Setup" },
+          { "name": "UI Kit Setup" },
+          { "name": "Mail Server Setup (SendGrid)" },
+          { "name": "Database Architecture" }
+        ]
+      },
+      {
+        "name": "Authentication & User Management",
+        "features": [
+          { "name": "Sign-Up", "subFeatures": ["Email confirmation"] },
+          { "name": "Sign-In", "subFeatures": ["Basic validation"] },
+          { "name": "Session Management", "subFeatures": ["Token/Cookie handling", "Logout"] },
+          { "name": "Role-based Access", "subFeatures": ["Admin", "Employee", "User"] },
+          { "name": "Password Management", "subFeatures": ["Change password", "Forgot password"] },
+          { "name": "Post Login Redirect", "subFeatures": ["Blog overview"] }
+        ]
+      },
+      {
+        "name": "Dashboard - My Account",
+        "features": [
+          { "name": "About Me" },
+          { "name": "My Arsenal" },
+          { "name": "My Documents", "subFeatures": ["Upload", "Download", "Preview"] }
+        ]
+      },
+      {
+        "name": "Booking - Ranges",
+        "features": [
+          { "name": "Ranges Grid", "subFeatures": ["Availability", "Filter & sorting"] },
+          { "name": "Booking Flow", "subFeatures": ["Date/time selection", "Type-based fields"] },
+          { "name": "Checkout", "subFeatures": ["Stripe Integration"] },
+          { "name": "Post-Booking Actions", "subFeatures": ["Confirmation email", "Cancel/Refund"] }
+        ],
+        "assumptions": ["Employee booking - Payment bypass"]
+      },
+      {
+        "name": "Shooting Book",
+        "features": [
+          { "name": "Data Grid", "subFeatures": ["Filter", "Search", "Pagination"] },
+          { "name": "Export Data", "subFeatures": ["CSV", "XLS"] },
+          { "name": "Admin CRUD", "subFeatures": ["Add", "Edit", "Delete"] }
+        ],
+        "assumptions": ["Minor UI changes for employee view"]
+      },
+      {
+        "name": "Messaging & Chat",
+        "features": [
+          { "name": "Real-time Messaging", "subFeatures": ["WebSocket setup"] },
+          { "name": "Direct Messages" },
+          { "name": "Group Chats", "subFeatures": ["Invite users"] },
+          { "name": "Attachments Support" },
+          { "name": "Search" },
+          { "name": "System Messages", "subFeatures": ["Join/leave notifications"] },
+          { "name": "Admin Controls", "subFeatures": ["Remove users", "Show media", "Filters"] }
+        ]
+      },
+      {
+        "name": "Calendar",
+        "features": [
+          { "name": "Calendar View" },
+          { "name": "Event Management", "subFeatures": ["Remove event + refund", "Add new event"] },
+          { "name": "Email Invites" }
+        ]
+      },
+      {
+        "name": "Admin Management",
+        "features": [
+          { "name": "Admin Login" },
+          { "name": "Last Logins" },
+          { "name": "Employee List" },
+          { "name": "Track Management", "subFeatures": ["Open/Close logic", "Refund handling", "Block paths"] },
+          { "name": "Bookings Calendar" },
+          { "name": "Range & Inventory Settings" }
+        ]
+      },
+      {
+        "name": "User Management",
+        "features": [
+          { "name": "Users Grid", "subFeatures": ["Filters", "Export"] },
+          { "name": "User Actions", "subFeatures": ["Suspend", "Modify data"] },
+          { "name": "Invite User via Email" }
+        ],
+        "assumptions": ["Minor changes for employee view"]
+      },
+      {
+        "name": "Landing Website & Blog",
+        "features": [
+          { "name": "Navigation Bar & Footer" },
+          { "name": "Main Pages", "subFeatures": ["Start", "Our Facility", "Arms Trade", "Hunting School", "Courses"] },
+          { "name": "Secondary Pages", "subFeatures": ["Contact", "Masthead", "Privacy", "Terms and Conditions"] },
+          { "name": "Blog", "subFeatures": ["CMS/Admin Panel", "Blog Content Pages"] }
+        ]
+      },
+      {
+        "name": "Testing",
+        "features": [
+          { "name": "Unit Testing", "subFeatures": ["Jest"] },
+          { "name": "Component Testing", "subFeatures": ["React Testing Library"] }
+        ]
+      }
+    ]
+  }
+  

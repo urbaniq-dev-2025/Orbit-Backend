@@ -1,0 +1,39 @@
+# Docker Compose Override for Development
+# Copy this file to docker-compose.override.yml to enable development features
+# This file is automatically loaded by docker-compose if it exists
+
+version: "3.9"
+
+services:
+  backend-api:
+    # Mount source code for hot-reload (requires uvicorn --reload)
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/migrations:/app/migrations
+    # Override command to enable auto-reload
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    # Add development environment variables
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+
+  ingestion-service:
+    # Mount source code for hot-reload
+    volumes:
+      - ./backend/ingestion/clarivo_ingestion:/app/clarivo_ingestion
+      - ./backend/ingestion/Input:/app/Input:ro
+      - ./backend/ingestion/Output:/app/Output
+    # Override command to enable auto-reload
+    command: ["uvicorn", "clarivo_ingestion.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    # Add development environment variables
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+
+  postgres:
+    # Expose additional ports for database tools
+    ports:
+      - "5432:5432"
+    # Add development logging
+    command: postgres -c log_statement=all -c log_destination=stderr
+

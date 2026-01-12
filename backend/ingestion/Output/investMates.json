@@ -1,0 +1,176 @@
+{
+    "productName": "InvestMates",
+    "vision": "AI-led global wealth & family office platform for everyone.",
+    "modules": [
+      {
+        "name": "User & Family Management",
+        "features": [
+          {
+            "name": "User Profiles & Risk Profiles",
+            "description": "Individual onboarding and personalized financial behavior modeling."
+          },
+          {
+            "name": "Family Wealth Profiles",
+            "description": "Add spouse, dependents, parents; unified governance of family financial life.",
+            "subfeatures": [
+              "Switchable profiles across family",
+              "Role-based permissions for actions",
+              "Family-level health score"
+            ],
+            "source": "Family-centric financial management explained in meeting"
+          }
+        ]
+      },
+      {
+        "name": "Global Portfolio Aggregation",
+        "features": [
+          {
+            "name": "Real-time Account Sync",
+            "description": "Connect India, US and global financial institutions for live updates.",
+            "subfeatures": [
+              "Stocks, ETFs, bonds, crypto",
+              "Loans & liabilities",
+              "Real estate and alt-assets"
+            ]
+          },
+          {
+            "name": "Multi-Currency Support",
+            "description": "Display net worth aggregated and in individual currency views."
+          }
+        ],
+        "source": "User can track India + US wealth across accounts :contentReference[oaicite:1]{index=1}"
+      },
+      {
+        "name": "AI Investment Advisor",
+        "features": [
+          {
+            "name": "Portfolio Review",
+            "description": "Analyze portfolio performance & asset allocation health.",
+            "subfeatures": [
+              "Health score explanation",
+              "Sector & risk concentration warnings",
+              "AI-led rebalance suggestions"
+            ],
+            "source": "Analyzes holdings and suggests rebalancing :contentReference[oaicite:2]{index=2}"
+          },
+          {
+            "name": "Do-It-For-Me Execution",
+            "description": "Convert AI recommendations into real trades automatically with human approval checkpoints.",
+            "source": "User request: 'Just do it for me' vs 20–30 manual actions :contentReference[oaicite:3]{index=3}"
+          },
+          {
+            "name": "Goal-Based Planning",
+            "description": "Retirement, education, travel, major expenses impact analysis.",
+            "subfeatures": [
+              "Goal-based portfolio mapping",
+              "Probability of success estimation"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Proactive Insights Engine",
+        "features": [
+          {
+            "name": "Push Alerts & Notifications",
+            "description": "Automatically detect events and notify users without requiring prompts.",
+            "subfeatures": [
+              "Tax compliance alerts",
+              "Underperforming funds/stocks",
+              "Spending category anomalies"
+            ],
+            "source": "Platform should provide proactive auto-insights :contentReference[oaicite:4]{index=4}"
+          },
+          {
+            "name": "Explainer Conversations",
+            "description": "Explain WHY insight matters and recommended action.",
+            "source": "User asks 'Why is this poor quality?' leading to chat explanation :contentReference[oaicite:5]{index=5}"
+          },
+          {
+            "name": "AI Nudging Based on User Maturity",
+            "description": "Insights change as user learns the platform.",
+            "subfeatures": [
+              "Beginner: basic financial education nudges",
+              "Intermediate: portfolio insights",
+              "Pro: deeper risk/tax/opportunity strategies"
+            ],
+            "source": "Different nudges based on literacy levels :contentReference[oaicite:6]{index=6}"
+          }
+        ]
+      },
+      {
+        "name": "Conversational Wealth Assistant",
+        "features": [
+          {
+            "name": "Ask Me Anything Chat",
+            "description": "Financial queries answered like a human advisor."
+          },
+          {
+            "name": "Context-Aware Triggered Chat",
+            "description": "Chat opens automatically when user taps an insight",
+            "source": "Conversation triggered from insights :contentReference[oaicite:7]{index=7}"
+          },
+          {
+            "name": "Explainability & Audit Trail",
+            "description": "Build trust through transparent reasoning and disclaimers.",
+            "source": "Trust and transparency in AI guidance required :contentReference[oaicite:8]{index=8}"
+          }
+        ]
+      },
+      {
+        "name": "Tax Optimization",
+        "features": [
+          {
+            "name": "Tax Harvesting Optimization",
+            "description": "Sell-loss strategy aligned to tax rules."
+          },
+          {
+            "name": "Country-Specific Rules Engine",
+            "description": "Support India & US regulations.",
+            "source": "Demo shows US and India support :contentReference[oaicite:9]{index=9}"
+          }
+        ]
+      },
+      {
+        "name": "Insurance & Estate Strategy",
+        "features": [
+          {
+            "name": "Insurance Gap Evaluation",
+            "description": "Detects missing insurance coverage."
+          },
+          {
+            "name": "Estate & Succession Planning",
+            "description": "Provide legal and financial continuity planning."
+          }
+        ]
+      },
+      {
+        "name": "AI Agentic Workflows",
+        "features": [
+          {
+            "name": "Autonomous Action Workflows",
+            "description": "When allowed, AI triggers actions aligned to user’s financial strategy."
+          },
+          {
+            "name": "Regulatory Guardrails",
+            "description": "Compliance checks requiring user confirmation.",
+            "source": "Regulation may require human approvals before execution :contentReference[oaicite:10]{index=10}"
+          }
+        ]
+      },
+      {
+        "name": "Trust & Security Layer",
+        "features": [
+          {
+            "name": "Explainable Decisions",
+            "description": "Every insight justified with reasoning."
+          },
+          {
+            "name": "Consent-Based Automation",
+            "description": "User explicitly controls automation levels."
+          }
+        ]
+      }
+    ]
+  }
+  
