@@ -9,6 +9,7 @@ class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+    role: str  # User role: 'admin' or 'user'
 
 
 class TokenPayload(BaseModel):
@@ -91,4 +92,11 @@ class PasswordResetCompleteRequest(BaseModel):
     class Config:
         allow_population_by_field_name = True
 
+
+class UserProfileUpdateRequest(BaseModel):
+    full_name: Optional[str] = Field(None, alias="fullName")
+    avatar_url: Optional[str] = Field(None, alias="avatarUrl")
+
+    class Config:
+        allow_population_by_field_name = True
 

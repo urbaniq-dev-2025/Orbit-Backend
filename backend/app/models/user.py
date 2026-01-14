@@ -17,6 +17,8 @@ class User(Base):
     email = Column(String(255), nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=True)
+    avatar_url = Column(String(500), nullable=True)
+    role = Column(String(50), default="user", nullable=False)  # 'admin' or 'user'
     is_active = Column(Boolean, default=True, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
     onboarding_step = Column(String(50), default="none", nullable=False)

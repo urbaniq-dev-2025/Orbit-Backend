@@ -1,10 +1,8 @@
-version: "3.9"
-
 services:
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
-    container_name: clarivo-postgres
+    container_name: orbit-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -12,7 +10,7 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - orbit_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
@@ -20,15 +18,18 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - clarivo-network
+      - orbit-network
 
   # Backend API Service
   backend-api:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: clarivo/backend-api:latest
-    container_name: clarivo-backend-api
+      tags:
+        - orbit/backend-api:latest
+        - orbit/backend-api:${VERSION:-dev}
+    image: orbit/backend-api:latest
+    container_name: orbit-backend-api
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-orbit}
@@ -42,8 +43,10 @@ services:
     ports:
       - "${BACKEND_PORT:-8001}:8000"
     volumes:
-      - ./backend/app:/app/app:ro
-      - ./backend/migrations:/app/migrations:ro
+      - ./backend/app:/app/app
+      - ./backend/migrations:/app/migrations
+      - ./backend/scripts:/app/scripts
+      - ./backend/alembic.ini:/app/alembic.ini
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,17 +58,20 @@ services:
       start_period: 40s
     restart: unless-stopped
     networks:
-      - clarivo-network
+      - orbit-network
 
   # Ingestion Service
   ingestion-service:
     build:
       context: ./backend/ingestion
       dockerfile: Dockerfile
-    image: clarivo/ingestion:latest
-    container_name: clarivo-ingestion
+      tags:
+        - orbit/ingestion:latest
+        - orbit/ingestion:${VERSION:-dev}
+    image: orbit/ingestion:latest
+    container_name: orbit-ingestion
     environment:
-      - APP_NAME=Clarivo Ingestion Service
+      - APP_NAME=Orbit Ingestion Service
       - ENVIRONMENT=${INGESTION_ENVIRONMENT:-dev}
       - DEBUG=${DEBUG:-true}
       - CLARIFICATION_MIN_LENGTH=${CLARIFICATION_MIN_LENGTH:-500}
@@ -85,13 +91,14 @@ services:
       start_period: 40s
     restart: unless-stopped
     networks:
-      - clarivo-network
+      - orbit-network
 
 volumes:
-  postgres_data:
+  orbit_postgres_data:
     driver: local
+    name: orbit_postgres_data
 
 networks:
-  clarivo-network:
+  orbit-network:
     driver: bridge
-
+    name: orbit-network

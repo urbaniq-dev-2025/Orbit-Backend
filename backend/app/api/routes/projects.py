@@ -11,8 +11,11 @@ from app.models import Scope
 from app.schemas.project import (
     ProjectCreate,
     ProjectDetail,
+    ProjectProgressUpdate,
     ProjectStatus,
+    ProjectStatusUpdate,
     ProjectSummary,
+    ProjectTeamAssignRequest,
     ProjectUpdate,
 )
 from app.services import projects as project_service
@@ -126,6 +129,61 @@ async def delete_project(
         raise _map_project_exception(exc) from exc
 
 
+@router.put("/{project_id}/status", response_model=ProjectDetail)
+async def update_project_status(
+    project_id: uuid.UUID,
+    payload: ProjectStatusUpdate,
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+) -> ProjectDetail:
+    """Update project status."""
+    try:
+        project = await project_service.update_project_status(
+            session, project_id, current_user.id, payload.status
+        )
+        return await _build_project_detail(session, project)
+    except Exception as exc:
+        raise _map_project_exception(exc) from exc
+
+
+@router.put("/{project_id}/progress", response_model=ProjectDetail)
+async def update_project_progress(
+    project_id: uuid.UUID,
+    payload: ProjectProgressUpdate,
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+) -> ProjectDetail:
+    """Update project progress."""
+    try:
+        project = await project_service.update_project_progress(
+            session, project_id, current_user.id, payload.progress
+        )
+        return await _build_project_detail(session, project)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    except Exception as exc:
+        raise _map_project_exception(exc) from exc
+
+
+@router.post("/{project_id}/team", response_model=ProjectDetail)
+async def assign_project_team(
+    project_id: uuid.UUID,
+    payload: ProjectTeamAssignRequest,
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+) -> ProjectDetail:
+    """Assign team members to a project."""
+    try:
+        project = await project_service.assign_project_team(
+            session, project_id, current_user.id, payload.team
+        )
+        return await _build_project_detail(session, project)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    except Exception as exc:
+        raise _map_project_exception(exc) from exc
+
+
 # Helper Functions
 
 
@@ -147,6 +205,10 @@ async def _build_project_detail(session, project) -> ProjectDetail:
         created_at=project.created_at,
         updated_at=project.updated_at,
         scopes_count=scopes_count,
+        engagement_type=getattr(project, "engagement_type", None),
+        progress=getattr(project, "progress", 0),
+        budget=float(project.budget) if project.budget else None,
+        team=project.team if project.team else None,
     )
 
 

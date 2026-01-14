@@ -143,3 +143,54 @@ async def delete_project(session: AsyncSession, project_id: uuid.UUID, user_id: 
     await session.commit()
 
 
+async def update_project_status(
+    session: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID, status: str
+) -> Project:
+    """Update project status."""
+    project = await get_project(session, project_id, user_id, include_scopes=False)
+    project.status = status
+    await session.commit()
+    await session.refresh(project)
+    return project
+
+
+async def update_project_progress(
+    session: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID, progress: int
+) -> Project:
+    """Update project progress (0-100)."""
+    if not 0 <= progress <= 100:
+        raise ValueError("Progress must be between 0 and 100")
+    project = await get_project(session, project_id, user_id, include_scopes=False)
+    project.progress = progress
+    await session.commit()
+    await session.refresh(project)
+    return project
+
+
+async def assign_project_team(
+    session: AsyncSession, project_id: uuid.UUID, user_id: uuid.UUID, team: List[uuid.UUID]
+) -> Project:
+    """Assign team members to a project."""
+    project = await get_project(session, project_id, user_id, include_scopes=False)
+    
+    # Validate that all team members have access to the workspace
+    from app.models import User, WorkspaceMember
+    workspace_members_stmt = select(WorkspaceMember.user_id).where(
+        WorkspaceMember.workspace_id == project.workspace_id,
+        WorkspaceMember.user_id.in_(team),
+        WorkspaceMember.status == "active",
+    )
+    workspace_members_result = await session.execute(workspace_members_stmt)
+    valid_user_ids = {row[0] for row in workspace_members_result.all()}
+    
+    invalid_user_ids = set(team) - valid_user_ids
+    if invalid_user_ids:
+        raise ValueError(
+            f"Users {invalid_user_ids} do not have access to the workspace"
+        )
+    
+    project.team = team
+    await session.commit()
+    await session.refresh(project)
+    return project
+

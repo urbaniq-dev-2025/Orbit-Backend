@@ -111,3 +111,20 @@ class WorkspaceDetail(BaseModel):
         orm_mode = True
 
 
+class WorkspaceInviteRequest(BaseModel):
+    email: EmailStr
+    role: WorkspaceRole = WorkspaceRole.member
+    message: Optional[str] = None
+
+
+class WorkspaceInviteResponse(BaseModel):
+    id: uuid.UUID
+    email: Optional[EmailStr] = None
+    role: WorkspaceRole
+    status: WorkspaceMemberStatus
+    invited_at: Optional[dt.datetime] = None
+
+
+class WorkspaceMemberUpdateRequest(BaseModel):
+    role: WorkspaceRole
+

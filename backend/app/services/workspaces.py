@@ -5,7 +5,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Iterable, Optional
 
-from sqlalchemy import Select, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -166,4 +166,174 @@ async def update_workspace(
     await session.refresh(workspace)
     return workspace
 
+
+async def delete_workspace(
+    session: AsyncSession,
+    workspace_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> None:
+    """Delete a workspace. Only the owner can delete."""
+    workspace, membership = await get_workspace_for_user(session, workspace_id, user_id)
+    if membership.role != "owner":
+        raise WorkspaceAccessError("Only the workspace owner can delete the workspace")
+    await session.delete(workspace)
+    await session.commit()
+
+
+async def invite_member(
+    session: AsyncSession,
+    workspace_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    email: str,
+    role: str = "member",
+    message: Optional[str] = None,
+) -> WorkspaceMember:
+    """Invite a member to a workspace."""
+    workspace, membership = await get_workspace_for_user(session, workspace_id, user_id)
+    if membership.role not in {"owner", "admin"}:
+        raise WorkspaceAccessError("Only owners and admins can invite members")
+
+    # Check if user already exists
+    from app.models import User
+    user_stmt = select(User).where(User.email == email.lower())
+    user_result = await session.execute(user_stmt)
+    existing_user = user_result.scalar_one_or_none()
+
+    # Check if membership already exists
+    if existing_user:
+        member_stmt = select(WorkspaceMember).where(
+            WorkspaceMember.workspace_id == workspace_id,
+            WorkspaceMember.user_id == existing_user.id,
+        )
+        member_result = await session.execute(member_stmt)
+        existing_member = member_result.scalar_one_or_none()
+        if existing_member:
+            raise ValueError("User is already a member of this workspace")
+
+    # Check if invitation already exists
+    invite_stmt = select(WorkspaceMember).where(
+        WorkspaceMember.workspace_id == workspace_id,
+        WorkspaceMember.invited_email == email.lower(),
+        WorkspaceMember.user_id.is_(None),
+    )
+    invite_result = await session.execute(invite_stmt)
+    existing_invite = invite_result.scalar_one_or_none()
+
+    if existing_invite:
+        # Update existing invitation
+        existing_invite.role = role
+        existing_invite.invited_at = dt.datetime.now(dt.timezone.utc)
+        await session.commit()
+        await session.refresh(existing_invite)
+        return existing_invite
+
+    # Create new invitation
+    now = dt.datetime.now(dt.timezone.utc)
+    member = WorkspaceMember(
+        workspace_id=workspace_id,
+        user_id=existing_user.id if existing_user else None,
+        invited_email=email.lower() if not existing_user else None,
+        role=role,
+        status="pending" if not existing_user else "active",
+        invited_at=now if not existing_user else None,
+        joined_at=now if existing_user else None,
+    )
+    session.add(member)
+    await session.commit()
+    await session.refresh(member)
+    return member
+
+
+async def list_workspace_members(
+    session: AsyncSession,
+    workspace_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> list[WorkspaceMember]:
+    """List all members of a workspace."""
+    workspace, membership = await get_workspace_for_user(session, workspace_id, user_id)
+    stmt = (
+        select(WorkspaceMember)
+        .where(WorkspaceMember.workspace_id == workspace_id)
+        .options(selectinload(WorkspaceMember.user))
+        .order_by(WorkspaceMember.created_at)
+    )
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def update_member_role(
+    session: AsyncSession,
+    workspace_id: uuid.UUID,
+    member_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    role: str,
+) -> WorkspaceMember:
+    """Update a member's role."""
+    workspace, membership = await get_workspace_for_user(session, workspace_id, user_id)
+    if membership.role not in {"owner", "admin"}:
+        raise WorkspaceAccessError("Only owners and admins can update member roles")
+
+    # Cannot change owner role
+    if role == "owner" and membership.role != "owner":
+        raise WorkspaceAccessError("Only the current owner can assign owner role")
+
+    member_stmt = select(WorkspaceMember).where(
+        WorkspaceMember.id == member_id,
+        WorkspaceMember.workspace_id == workspace_id,
+    )
+    member_result = await session.execute(member_stmt)
+    member = member_result.scalar_one_or_none()
+    if member is None:
+        raise WorkspaceNotFoundError("Member not found")
+
+    # Cannot change owner's role
+    if member.role == "owner" and role != "owner":
+        raise WorkspaceAccessError("Cannot change owner's role")
+
+    member.role = role
+    await session.commit()
+    await session.refresh(member)
+    return member
+
+
+async def remove_member(
+    session: AsyncSession,
+    workspace_id: uuid.UUID,
+    member_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> None:
+    """Remove a member from a workspace."""
+    workspace, membership = await get_workspace_for_user(session, workspace_id, user_id)
+    if membership.role not in {"owner", "admin"}:
+        raise WorkspaceAccessError("Only owners and admins can remove members")
+
+    member_stmt = select(WorkspaceMember).where(
+        WorkspaceMember.id == member_id,
+        WorkspaceMember.workspace_id == workspace_id,
+    )
+    member_result = await session.execute(member_stmt)
+    member = member_result.scalar_one_or_none()
+    if member is None:
+        raise WorkspaceNotFoundError("Member not found")
+
+    # Cannot remove owner
+    if member.role == "owner":
+        raise WorkspaceAccessError("Cannot remove workspace owner")
+
+    # Cannot remove yourself if you're the only admin/owner
+    if member.user_id == user_id and membership.role in {"owner", "admin"}:
+        admin_count_stmt = select(func.count()).select_from(WorkspaceMember).where(
+            WorkspaceMember.workspace_id == workspace_id,
+            WorkspaceMember.role.in_({"owner", "admin"}),
+            WorkspaceMember.status == "active",
+        )
+        admin_count_result = await session.execute(admin_count_stmt)
+        admin_count = admin_count_result.scalar_one()
+        if admin_count <= 1:
+            raise WorkspaceAccessError("Cannot remove the last admin/owner")
+
+    await session.delete(member)
+    await session.commit()
 

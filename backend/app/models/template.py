@@ -23,9 +23,11 @@ class Template(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    type: Mapped[str] = mapped_column(String(50), nullable=False, default="scope")  # "scope" | "prd" | "project"
     category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     sections: Mapped[dict] = mapped_column(JSON, nullable=False)
     table_columns: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    variables: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)  # Array of variable names
     is_public: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_system: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     usage_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

@@ -463,3 +463,98 @@ async def get_proposal_analytics(
     }
 
 
+# Proposal Export and Duplicate Functions
+
+
+async def export_proposal(
+    session: AsyncSession,
+    proposal_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    format: str = "pdf",
+    include_notes: bool = True,
+) -> dict:
+    """
+    Export proposal to PDF format.
+    Returns export ID, status, and download URL.
+    Note: PDF generation infrastructure needs to be configured.
+    """
+    proposal = await get_proposal(session, proposal_id, user_id, include_slides=True)
+
+    # TODO: Implement actual PDF generation
+    # For now, return placeholder response
+    # This should:
+    # 1. Generate PDF from proposal data (slides, template, etc.)
+    # 2. Upload to file storage (S3, local, etc.)
+    # 3. Generate signed download URL
+    # 4. Return export ID and URL
+
+    import uuid as uuid_lib
+    from datetime import datetime, timedelta
+
+    export_id = uuid_lib.uuid4()
+
+    # Placeholder: Generate file path
+    # In production, this would be: f"https://storage.example.com/exports/{export_id}.pdf"
+    download_url = f"/api/proposals/{proposal_id}/exports/{export_id}.pdf"
+
+    return {
+        "export_id": export_id,
+        "status": "processing",
+        "download_url": download_url,
+    }
+
+
+async def duplicate_proposal(
+    session: AsyncSession, proposal_id: uuid.UUID, user_id: uuid.UUID
+) -> Proposal:
+    """
+    Duplicate a proposal with all its slides.
+    Creates a new proposal with "(Copy)" suffix in the name.
+    """
+    original = await get_proposal(session, proposal_id, user_id, include_slides=True)
+
+    # Create new proposal
+    new_proposal = Proposal(
+        scope_id=original.scope_id,
+        workspace_id=original.workspace_id,
+        name=f"{original.name} (Copy)",
+        client_name=original.client_name,
+        template=original.template,
+        cover_color=original.cover_color,
+        status="draft",
+        created_by=user_id,
+    )
+
+    session.add(new_proposal)
+    await session.flush()
+    await session.refresh(new_proposal)
+
+    # Copy slides
+    for slide in original.slides:
+        new_slide = ProposalSlide(
+            proposal_id=new_proposal.id,
+            slide_number=slide.slide_number,
+            title=slide.title,
+            content=slide.content,
+            slide_type=slide.slide_type,
+            order_index=slide.order_index,
+        )
+        session.add(new_slide)
+
+    await session.flush()
+
+    # Update slide_count
+    slide_count_stmt = select(func.count(ProposalSlide.id)).where(
+        ProposalSlide.proposal_id == new_proposal.id
+    )
+    slide_count = (await session.execute(slide_count_stmt)).scalar_one()
+    new_proposal.slide_count = slide_count
+
+    await session.commit()
+    await session.refresh(new_proposal)
+
+    # Reload with slides
+    return await get_proposal(session, new_proposal.id, user_id, include_slides=True)
+
+

@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import func, select
 
 from app.api import deps
@@ -11,6 +11,10 @@ from app.models import Comment, Document, Favourite, Scope
 from app.schemas.scope import (
     ScopeCreate,
     ScopeDetail,
+    ScopeExportRequest,
+    ScopeExportResponse,
+    ScopeExtractRequest,
+    ScopeExtractResponse,
     ScopeListResponse,
     ScopeReorderRequest,
     ScopeSectionCreate,
@@ -19,6 +23,7 @@ from app.schemas.scope import (
     ScopeStatusUpdate,
     ScopeSummary,
     ScopeUpdate,
+    ScopeUploadResponse,
 )
 from app.services import scopes as scope_service
 
@@ -348,6 +353,148 @@ async def reorder_scope_sections(
             session, scope_id, current_user.id, payload.section_ids
         )
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except Exception as exc:
+        raise _map_scope_exception(exc) from exc
+
+
+@router.post("/{scope_id}/export", response_model=ScopeExportResponse, status_code=status.HTTP_200_OK)
+async def export_scope(
+    scope_id: uuid.UUID,
+    payload: ScopeExportRequest,
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+) -> ScopeExportResponse:
+    """
+    Export scope to PDF or DOCX format.
+    Note: File storage infrastructure needs to be configured for production use.
+    """
+    try:
+        result = await scope_service.export_scope(
+            session,
+            scope_id,
+            current_user.id,
+            format=payload.format,
+            include_sections=payload.include_sections,
+            template=payload.template,
+        )
+        return ScopeExportResponse(
+            download_url=result["download_url"],
+            expires_at=result["expires_at"],
+        )
+    except Exception as exc:
+        raise _map_scope_exception(exc) from exc
+
+
+@router.post("/{scope_id}/upload", response_model=ScopeUploadResponse, status_code=status.HTTP_202_ACCEPTED)
+async def upload_scope_document(
+    scope_id: uuid.UUID,
+    session: deps.SessionDep,
+    file: UploadFile = File(...),
+    current_user=Depends(deps.get_current_user),
+) -> ScopeUploadResponse:
+    """
+    Upload a document for a scope.
+    Supports PDF, DOCX, TXT, and image files.
+    Note: File storage infrastructure needs to be configured.
+    """
+    try:
+        # Validate file type
+        allowed_extensions = {".pdf", ".docx", ".doc", ".txt", ".png", ".jpg", ".jpeg"}
+        file_ext = None
+        for ext in allowed_extensions:
+            if file.filename and file.filename.lower().endswith(ext):
+                file_ext = ext
+                break
+
+        if not file_ext:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File type not supported. Allowed: {', '.join(allowed_extensions)}",
+            )
+
+        # Validate file size (50MB max)
+        MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+        file_content = await file.read()
+        file_size = len(file_content)
+
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File size exceeds maximum of {MAX_FILE_SIZE // (1024 * 1024)}MB",
+            )
+
+        # TODO: Upload file to storage (S3, local filesystem, etc.)
+        # For now, create a placeholder file URL
+        # In production, this should:
+        # 1. Generate unique filename
+        # 2. Upload to storage service
+        # 3. Get file URL
+        # 4. Store in Document model
+
+        import os
+        from pathlib import Path
+
+        # Placeholder: Save to local storage (for development)
+        # In production, use S3 or similar
+        upload_dir = Path("uploads") / str(scope_id)
+        upload_dir.mkdir(parents=True, exist_ok=True)
+
+        unique_filename = f"{uuid.uuid4()}{file_ext}"
+        file_path = upload_dir / unique_filename
+
+        with open(file_path, "wb") as f:
+            f.write(file_content)
+
+        # Generate file URL (placeholder - in production this would be a storage URL)
+        file_url = f"/uploads/{scope_id}/{unique_filename}"
+
+        # Create document record
+        document = await scope_service.upload_scope_document(
+            session,
+            scope_id,
+            current_user.id,
+            filename=file.filename or unique_filename,
+            file_size=file_size,
+            mime_type=file.content_type or "application/octet-stream",
+            file_url=file_url,
+        )
+
+        return ScopeUploadResponse(
+            upload_id=document.id,
+            status="processing",
+            message="Document uploaded, extraction in progress",
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _map_scope_exception(exc) from exc
+
+
+@router.post("/{scope_id}/extract", response_model=ScopeExtractResponse, status_code=status.HTTP_202_ACCEPTED)
+async def extract_scope_from_document(
+    scope_id: uuid.UUID,
+    payload: ScopeExtractRequest,
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+) -> ScopeExtractResponse:
+    """
+    Trigger AI extraction from uploaded document.
+    Returns extraction job ID for status polling.
+    Note: Integration with ingestion service needs to be configured.
+    """
+    try:
+        result = await scope_service.extract_scope_from_document(
+            session,
+            scope_id,
+            current_user.id,
+            upload_id=payload.upload_id,
+            extraction_type=payload.extraction_type,
+        )
+        return ScopeExtractResponse(
+            extraction_id=result["extraction_id"],
+            status=result["status"],
+            estimated_time=result["estimated_time"],
+        )
     except Exception as exc:
         raise _map_scope_exception(exc) from exc
 

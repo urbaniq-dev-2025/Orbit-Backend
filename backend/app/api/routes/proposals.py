@@ -10,6 +10,8 @@ from app.schemas.proposal import (
     ProposalAnalyticsResponse,
     ProposalCreate,
     ProposalDetail,
+    ProposalExportRequest,
+    ProposalExportResponse,
     ProposalSendRequest,
     ProposalSendResponse,
     ProposalSlideCreate,
@@ -345,6 +347,48 @@ async def reorder_proposal_slides(
             session, proposal_id, current_user.id, payload.slide_ids
         )
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except Exception as exc:
+        raise _map_proposal_exception(exc) from exc
+
+
+@router.post("/{proposal_id}/export", response_model=ProposalExportResponse, status_code=status.HTTP_202_ACCEPTED)
+async def export_proposal(
+    proposal_id: uuid.UUID,
+    payload: ProposalExportRequest,
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+) -> ProposalExportResponse:
+    """
+    Export proposal to PDF format.
+    Note: PDF generation infrastructure needs to be configured for production use.
+    """
+    try:
+        result = await proposal_service.export_proposal(
+            session,
+            proposal_id,
+            current_user.id,
+            format=payload.format,
+            include_notes=payload.include_notes,
+        )
+        return ProposalExportResponse(
+            export_id=result["export_id"],
+            status=result["status"],
+            download_url=result["download_url"],
+        )
+    except Exception as exc:
+        raise _map_proposal_exception(exc) from exc
+
+
+@router.post("/{proposal_id}/duplicate", response_model=ProposalDetail, status_code=status.HTTP_201_CREATED)
+async def duplicate_proposal(
+    proposal_id: uuid.UUID,
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+) -> ProposalDetail:
+    """Duplicate a proposal with all its slides."""
+    try:
+        proposal = await proposal_service.duplicate_proposal(session, proposal_id, current_user.id)
+        return await _build_proposal_detail(proposal)
     except Exception as exc:
         raise _map_proposal_exception(exc) from exc
 

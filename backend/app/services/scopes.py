@@ -7,7 +7,7 @@ from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Favourite, Scope, ScopeSection, Workspace, WorkspaceMember
+from app.models import Document, Favourite, Scope, ScopeSection, Workspace, WorkspaceMember
 from app.schemas.scope import ScopeCreate, ScopeStatus, ScopeUpdate
 
 
@@ -415,4 +415,150 @@ async def reorder_scope_sections(
         sections[section_id].order_index = order
 
     await session.commit()
+
+
+# Scope Export, Upload, and Extract Functions
+
+
+async def export_scope(
+    session: AsyncSession,
+    scope_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    format: str,
+    include_sections: bool = True,
+    template: str = "standard",
+) -> dict:
+    """
+    Export scope to PDF or DOCX format.
+    Returns download URL and expiration time.
+    Note: File storage infrastructure needs to be configured.
+    """
+    scope = await get_scope(session, scope_id, user_id, include_sections=include_sections)
+
+    # TODO: Implement actual export generation
+    # For now, return placeholder response
+    # This should:
+    # 1. Generate PDF/DOCX from scope data
+    # 2. Upload to file storage (S3, local, etc.)
+    # 3. Generate signed download URL
+    # 4. Return URL with expiration
+
+    from datetime import datetime, timedelta
+
+    # Placeholder: Generate file path
+    file_extension = "pdf" if format == "pdf" else "docx"
+    # In production, this would be: f"https://storage.example.com/exports/{scope_id}.{file_extension}"
+    download_url = f"/api/scopes/{scope_id}/exports/{scope_id}.{file_extension}"
+
+    return {
+        "download_url": download_url,
+        "expires_at": (datetime.utcnow() + timedelta(days=7)).isoformat() + "Z",
+    }
+
+
+async def upload_scope_document(
+    session: AsyncSession,
+    scope_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    filename: str,
+    file_size: int,
+    mime_type: str,
+    file_url: str,
+) -> "Document":
+    """
+    Upload a document for a scope.
+    Creates a Document record and links it to the scope.
+    """
+    from app.models import Document
+    from datetime import datetime
+
+    scope = await get_scope(session, scope_id, user_id, include_sections=False)
+
+    # Determine file type from extension
+    file_type = None
+    if filename.lower().endswith((".pdf",)):
+        file_type = "pdf"
+    elif filename.lower().endswith((".docx", ".doc")):
+        file_type = "docx"
+    elif filename.lower().endswith((".txt",)):
+        file_type = "txt"
+    elif filename.lower().endswith((".png", ".jpg", ".jpeg")):
+        file_type = "image"
+
+    document = Document(
+        scope_id=scope_id,
+        workspace_id=scope.workspace_id,
+        filename=filename,
+        file_url=file_url,
+        file_type=file_type,
+        file_size=file_size,
+        mime_type=mime_type,
+        processing_status="pending",
+        uploaded_by=user_id,
+    )
+
+    session.add(document)
+    await session.commit()
+    await session.refresh(document)
+
+    return document
+
+
+async def extract_scope_from_document(
+    session: AsyncSession,
+    scope_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    upload_id: uuid.UUID,
+    extraction_type: str,
+) -> dict:
+    """
+    Trigger AI extraction from uploaded document.
+    Integrates with ingestion service for processing.
+    Returns extraction job ID and status.
+    """
+    from app.models import Document
+    from datetime import datetime
+
+    scope = await get_scope(session, scope_id, user_id, include_sections=False)
+
+    # Verify document belongs to scope
+    doc_stmt = select(Document).where(
+        Document.id == upload_id,
+        Document.scope_id == scope_id,
+    )
+    doc_result = await session.execute(doc_stmt)
+    document = doc_result.scalar_one_or_none()
+
+    if document is None:
+        raise ScopeNotFoundError("Document not found for this scope")
+
+    # TODO: Integrate with ingestion service
+    # This should:
+    # 1. Call ingestion service API to trigger extraction
+    # 2. Update document processing_status to "processing"
+    # 3. Return extraction job ID
+    # 4. Client can poll for status
+
+    import uuid as uuid_lib
+
+    extraction_id = uuid_lib.uuid4()
+
+    # Update document status
+    document.processing_status = "processing"
+    await session.commit()
+
+    # Estimate processing time based on file size and type
+    estimated_time = 30  # Default 30 seconds
+    if document.file_size:
+        # Rough estimate: 1 second per MB, minimum 10 seconds
+        estimated_time = max(10, min(120, document.file_size // (1024 * 1024)))
+
+    return {
+        "extraction_id": extraction_id,
+        "status": "processing",
+        "estimated_time": estimated_time,
+    }
 

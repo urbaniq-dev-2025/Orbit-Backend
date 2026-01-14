@@ -146,3 +146,20 @@ class ProposalSlideReorderRequest(BaseModel):
         allow_population_by_field_name = True
 
 
+class ProposalExportRequest(BaseModel):
+    format: Literal["pdf"] = Field("pdf", description="Export format (currently only PDF supported)")
+    include_notes: bool = Field(True, alias="includeNotes", description="Include notes in export")
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class ProposalExportResponse(BaseModel):
+    export_id: uuid.UUID = Field(..., alias="exportId")
+    status: str
+    download_url: str = Field(..., alias="downloadUrl")
+
+    class Config:
+        allow_population_by_field_name = True
+
+

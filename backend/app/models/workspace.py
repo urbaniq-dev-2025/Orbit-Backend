@@ -67,6 +67,12 @@ class Workspace(Base):
     usage_metrics: Mapped[List["UsageMetric"]] = relationship(
         "UsageMetric", back_populates="workspace", cascade="all, delete-orphan"
     )
+    clients: Mapped[List["Client"]] = relationship(
+        "Client", back_populates="workspace", cascade="all, delete-orphan"
+    )
+    subscriptions: Mapped[List["Subscription"]] = relationship(
+        "Subscription", back_populates="workspace", cascade="all, delete-orphan"
+    )
 
 
 class WorkspaceMember(Base):

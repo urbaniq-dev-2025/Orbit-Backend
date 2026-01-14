@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import List, Optional
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, JSON, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, GUID
@@ -24,6 +24,10 @@ class Project(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     client_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="active", nullable=False)
+    engagement_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    budget: Mapped[Optional[float]] = mapped_column(Numeric(10, 2), nullable=True)
+    team: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)  # Array of user IDs
     created_by: Mapped[Optional[uuid.UUID]] = mapped_column(
         GUID(), ForeignKey("users.id"), nullable=True
     )

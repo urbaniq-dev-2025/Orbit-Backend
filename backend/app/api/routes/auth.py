@@ -30,6 +30,7 @@ from app.schemas.auth import (
     PasswordResetVerifyResponse,
     SignupRequest,
     Token,
+    UserProfileUpdateRequest,
 )
 from app.schemas.user import UserPublic
 from app.services.google_oauth import GoogleOAuthClient, GoogleOAuthError, GoogleUserInfo
@@ -53,7 +54,7 @@ async def signup(payload: SignupRequest, session: deps.SessionDep) -> Token:
     await session.refresh(user)
     access = create_access_token(str(user.id))
     refresh = create_refresh_token(str(user.id))
-    return Token(access_token=access, refresh_token=refresh)
+    return Token(access_token=access, refresh_token=refresh, role=user.role)
 
 
 @router.post("/signin", response_model=Token)
@@ -64,25 +65,64 @@ async def signin(payload: LoginRequest, session: deps.SessionDep) -> Token:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid credentials")
     access = create_access_token(str(user.id))
     refresh = create_refresh_token(str(user.id))
-    return Token(access_token=access, refresh_token=refresh)
+    return Token(access_token=access, refresh_token=refresh, role=user.role)
 
 
 @router.post("/refresh", response_model=Token)
-async def refresh_token(refresh_token: str) -> Token:
+async def refresh_token(refresh_token: str, session: deps.SessionDep) -> Token:
     from app.core.security import decode_token  # local import avoids cycle
+    import uuid
 
     payload = decode_token(refresh_token)
     if payload.get("type") != "refresh" or payload.get("sub") is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
     subject = payload["sub"]
+    
+    # Fetch user to get their role
+    user_id = uuid.UUID(subject)
+    result = await session.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
+    
     access = create_access_token(subject)
     new_refresh = create_refresh_token(subject)
-    return Token(access_token=access, refresh_token=new_refresh)
+    return Token(access_token=access, refresh_token=new_refresh, role=user.role)
 
 
 @router.get("/me", response_model=UserPublic)
 async def me(current_user: User = Depends(deps.get_current_user)) -> UserPublic:
     return UserPublic.from_orm(current_user)
+
+
+@router.put("/me", response_model=UserPublic)
+async def update_profile(
+    payload: UserProfileUpdateRequest,
+    session: deps.SessionDep,
+    current_user: User = Depends(deps.get_current_user),
+) -> UserPublic:
+    """Update current user profile."""
+    if payload.full_name is not None:
+        current_user.full_name = payload.full_name
+    if payload.avatar_url is not None:
+        current_user.avatar_url = payload.avatar_url
+    
+    await session.commit()
+    await session.refresh(current_user)
+    return UserPublic.from_orm(current_user)
+
+
+@router.post("/signout", status_code=status.HTTP_204_NO_CONTENT)
+async def signout(
+    current_user: User = Depends(deps.get_current_user),
+    response: Response = None,
+) -> Response:
+    """
+    Sign out user.
+    Note: Since we use stateless JWT tokens, the client should delete the token.
+    This endpoint is provided for consistency with the API requirements.
+    """
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/google/init", response_model=GoogleAuthInitResponse)
@@ -183,7 +223,7 @@ async def google_complete(
     user = await _get_or_create_google_user(session, user_info)
     access = create_access_token(str(user.id))
     refresh = create_refresh_token(str(user.id))
-    return Token(access_token=access, refresh_token=refresh)
+    return Token(access_token=access, refresh_token=refresh, role=user.role)
 
 
 @router.post("/password/request", status_code=status.HTTP_202_ACCEPTED)

@@ -54,9 +54,24 @@ class ProjectSummary(BaseModel):
 
 class ProjectDetail(ProjectSummary):
     scopes_count: int = Field(0, alias="scopesCount")
+    engagement_type: Optional[str] = Field(None, alias="engagementType")
+    progress: int = Field(0, ge=0, le=100)
+    budget: Optional[float] = None
+    team: Optional[List[uuid.UUID]] = None
 
     class Config:
         allow_population_by_field_name = True
         orm_mode = True
 
+
+class ProjectStatusUpdate(BaseModel):
+    status: ProjectStatus
+
+
+class ProjectProgressUpdate(BaseModel):
+    progress: int = Field(..., ge=0, le=100, description="Progress percentage (0-100)")
+
+
+class ProjectTeamAssignRequest(BaseModel):
+    team: List[uuid.UUID] = Field(..., description="List of user IDs to assign to the project")
 

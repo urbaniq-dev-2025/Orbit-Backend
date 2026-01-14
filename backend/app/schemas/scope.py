@@ -129,3 +129,46 @@ class ScopeReorderRequest(BaseModel):
         allow_population_by_field_name = True
 
 
+class ScopeExportRequest(BaseModel):
+    format: Literal["pdf", "docx"] = Field(..., description="Export format")
+    include_sections: bool = Field(True, alias="includeSections", description="Include all sections")
+    template: Literal["standard", "detailed"] = Field("standard", description="Export template")
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class ScopeExportResponse(BaseModel):
+    download_url: str = Field(..., alias="downloadUrl")
+    expires_at: datetime = Field(..., alias="expiresAt")
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class ScopeUploadResponse(BaseModel):
+    upload_id: uuid.UUID = Field(..., alias="uploadId")
+    status: str
+    message: str
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class ScopeExtractRequest(BaseModel):
+    upload_id: uuid.UUID = Field(..., alias="uploadId")
+    extraction_type: Literal["full", "summary", "sections"] = Field("full", alias="extractionType")
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class ScopeExtractResponse(BaseModel):
+    extraction_id: uuid.UUID = Field(..., alias="extractionId")
+    status: str
+    estimated_time: int = Field(..., alias="estimatedTime", description="Estimated time in seconds")
+
+    class Config:
+        allow_population_by_field_name = True
+
+

@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     smtp_use_tls: bool = Field(True, env="SMTP_USE_TLS")
     password_reset_emails_per_hour: int = Field(5, env="PASSWORD_RESET_EMAILS_PER_HOUR")
     invite_emails_per_hour: int = Field(20, env="INVITE_EMAILS_PER_HOUR")
+    admin_emails: Union[List[str], str] = Field(default_factory=list, env="ADMIN_EMAILS")
 
     class Config:
         env_file = ".env"

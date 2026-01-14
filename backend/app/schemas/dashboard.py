@@ -55,6 +55,17 @@ class ProposalStats(BaseModel):
         allow_population_by_field_name = True
 
 
+class ClientStats(BaseModel):
+    total: int
+    by_status: Dict[str, int] = Field(..., alias="byStatus")
+    prospect: int
+    active: int
+    past: int
+
+    class Config:
+        allow_population_by_field_name = True
+
+
 class WorkspaceInfo(BaseModel):
     id: str
     name: str
@@ -82,11 +93,60 @@ class DashboardStatsResponse(BaseModel):
     workspace_id: Optional[str] = Field(None, alias="workspaceId")
     workspace: Optional[WorkspaceInfo] = None
     members: List[MemberInfo] = Field(default_factory=list)
+    clients: ClientStats
     scopes: ScopeStats
     projects: ProjectStats
     quotations: QuotationStats
     proposals: ProposalStats
     recent_activity_count: int = Field(..., alias="recentActivityCount")
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class PipelineData(BaseModel):
+    scopes: Dict[str, int] = Field(default_factory=dict)
+    projects: Dict[str, int] = Field(default_factory=dict)
+    quotations: Dict[str, int] = Field(default_factory=dict)
+    proposals: Dict[str, int] = Field(default_factory=dict)
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class RecentItem(BaseModel):
+    id: str
+    title: str
+    status: str
+    updated_at: str = Field(..., alias="updatedAt")
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class RecentActivityResponse(BaseModel):
+    scopes: List[RecentItem] = Field(default_factory=list)
+    projects: List[RecentItem] = Field(default_factory=list)
+    prds: List[RecentItem] = Field(default_factory=list)
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class UrgentPRD(BaseModel):
+    id: str
+    title: str
+    priority: str
+    due_date: str = Field(..., alias="dueDate")
+    days_remaining: int = Field(..., alias="daysRemaining")
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class UrgentItemsResponse(BaseModel):
+    prds: List[UrgentPRD] = Field(default_factory=list)
+    tasks: List[dict] = Field(default_factory=list)
 
     class Config:
         allow_population_by_field_name = True

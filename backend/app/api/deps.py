@@ -57,3 +57,16 @@ async def get_current_user(
     return user
 
 
+async def get_admin_user(
+    current_user: Annotated[User, Depends(get_current_user)]
+) -> User:
+    """Verify that the current user is an admin."""
+    # Check if user has admin role in database
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    
+    return current_user
+
