@@ -49,6 +49,7 @@ async def list_clients(
                 city=c.city,
                 state=c.state,
                 country=c.country,
+                company_size=c.company_size,
                 created_at=c.created_at,
                 updated_at=c.updated_at,
                 last_activity=c.last_activity,

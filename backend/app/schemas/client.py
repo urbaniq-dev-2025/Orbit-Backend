@@ -7,6 +7,7 @@ from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
 
 ClientStatus = Literal["prospect", "active", "past"]
+CompanySize = Literal["SMB", "Mid-Market", "Enterprise"]
 
 
 class ClientBase(BaseModel):
@@ -21,6 +22,7 @@ class ClientBase(BaseModel):
     city: Optional[str] = Field(None, max_length=100)
     state: Optional[str] = Field(None, max_length=100)
     country: Optional[str] = Field(None, max_length=100)
+    company_size: Optional[CompanySize] = Field(None, alias="companySize")
 
     class Config:
         allow_population_by_field_name = True
@@ -45,6 +47,7 @@ class ClientUpdate(BaseModel):
     city: Optional[str] = Field(None, max_length=100)
     state: Optional[str] = Field(None, max_length=100)
     country: Optional[str] = Field(None, max_length=100)
+    company_size: Optional[CompanySize] = Field(None, alias="companySize")
 
     class Config:
         allow_population_by_field_name = True
@@ -64,6 +67,7 @@ class ClientSummary(BaseModel):
     city: Optional[str] = None
     state: Optional[str] = None
     country: Optional[str] = None
+    company_size: Optional[CompanySize] = Field(None, alias="companySize")
     created_at: datetime = Field(..., alias="createdAt")
     updated_at: datetime = Field(..., alias="updatedAt")
     last_activity: Optional[datetime] = Field(None, alias="lastActivity")

@@ -29,6 +29,7 @@ class Subscription(Base):
     current_period_start: Mapped[Optional[DateTime]] = mapped_column(DateTime(timezone=True), nullable=True)
     current_period_end: Mapped[Optional[DateTime]] = mapped_column(DateTime(timezone=True), nullable=True)
     cancel_at_period_end: Mapped[bool] = mapped_column(default=False, nullable=False)
+    cancellation_reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # Reason for cancellation
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

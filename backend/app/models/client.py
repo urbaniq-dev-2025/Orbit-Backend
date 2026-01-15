@@ -15,6 +15,7 @@ class Client(Base):
         Index("ix_clients_workspace", "workspace_id"),
         Index("ix_clients_status", "status"),
         Index("ix_clients_industry", "industry"),
+        Index("ix_clients_company_size", "company_size"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
@@ -34,6 +35,7 @@ class Client(Base):
     city: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     state: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     country: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    company_size: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # "SMB", "Mid-Market", "Enterprise"
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
