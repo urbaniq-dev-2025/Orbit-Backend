@@ -15,12 +15,34 @@ logger = get_logger(__name__)
 
 app = FastAPI(title=settings.app_name, version="0.1.0")
 
+# CORS Configuration
+# Always allow localhost origins in development
+if settings.environment == "development":
+    default_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001"]
+    if settings.cors_origins:
+        # Merge with existing origins
+        cors_origins = list(settings.cors_origins)
+        for origin in default_origins:
+            if origin not in cors_origins:
+                cors_origins.append(origin)
+    else:
+        cors_origins = default_origins
+else:
+    cors_origins = list(settings.cors_origins) if settings.cors_origins else ["*"]
+
+# Convert AnyHttpUrl objects to strings
+cors_origins = [str(origin) for origin in cors_origins]
+
+logger.info(f"CORS origins configured: {cors_origins}")
+logger.info(f"Environment: {settings.environment}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins or ["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 

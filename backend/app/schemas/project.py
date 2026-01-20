@@ -12,7 +12,8 @@ ProjectStatus = Literal["active", "archived", "completed", "on_hold"]
 class ProjectBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
-    client_name: Optional[str] = Field(None, alias="clientName", max_length=255)
+    client_id: Optional[uuid.UUID] = Field(None, alias="clientId")
+    client_name: Optional[str] = Field(None, alias="clientName", max_length=255)  # Kept for backward compatibility
     status: ProjectStatus = "active"
 
     class Config:
@@ -29,7 +30,8 @@ class ProjectCreate(ProjectBase):
 class ProjectUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
-    client_name: Optional[str] = Field(None, alias="clientName", max_length=255)
+    client_id: Optional[uuid.UUID] = Field(None, alias="clientId")
+    client_name: Optional[str] = Field(None, alias="clientName", max_length=255)  # Kept for backward compatibility
     status: Optional[ProjectStatus] = None
 
     class Config:
@@ -41,6 +43,7 @@ class ProjectSummary(BaseModel):
     workspace_id: uuid.UUID = Field(..., alias="workspaceId")
     name: str
     description: Optional[str] = None
+    client_id: Optional[uuid.UUID] = Field(None, alias="clientId")
     client_name: Optional[str] = Field(None, alias="clientName")
     status: ProjectStatus
     created_by: Optional[uuid.UUID] = Field(None, alias="createdBy")
@@ -49,7 +52,7 @@ class ProjectSummary(BaseModel):
 
     class Config:
         allow_population_by_field_name = True
-        orm_mode = True
+        from_attributes = True
 
 
 class ProjectDetail(ProjectSummary):
@@ -61,7 +64,7 @@ class ProjectDetail(ProjectSummary):
 
     class Config:
         allow_population_by_field_name = True
-        orm_mode = True
+        from_attributes = True
 
 
 class ProjectStatusUpdate(BaseModel):
@@ -74,4 +77,3 @@ class ProjectProgressUpdate(BaseModel):
 
 class ProjectTeamAssignRequest(BaseModel):
     team: List[uuid.UUID] = Field(..., description="List of user IDs to assign to the project")
-

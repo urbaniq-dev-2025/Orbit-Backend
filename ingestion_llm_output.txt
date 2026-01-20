@@ -1,0 +1,13 @@
+﻿
+  orbit-ingestion  | INFO:     172.19.0.3:54810 - "POST /v1/documents HTTP/1.1" 202 Accepted
+> orbit-ingestion  | 2026-01-20 17:33:13,686 | INFO | clarivo_ingestion.services.llm_scope | Using OpenAI API for LLM 
+scope generation (RAG-enabled) | module=llm_scope function=__init__ line=207
+  orbit-ingestion  | 2026-01-20 17:33:13,688 | INFO | clarivo_ingestion.services.llm_scope | RAG example retriever 
+initialized with Input: /app/Input, Output: /app/Output | module=llm_scope function=__init__ line=220
+  orbit-ingestion  | 2026-01-20 17:34:34,881 | INFO | httpx | HTTP Request: POST 
+https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK" | module=_client function=_send_single_request line=1740
+> orbit-ingestion  | 2026-01-20 17:34:34,896 | INFO | clarivo_ingestion.services.llm_scope | LLM scope generation 
+succeeded with 3 modules and 3 features. | module=llm_scope function=generate line=243
+  orbit-ingestion  | INFO:     172.19.0.3:54810 - "POST /v1/documents/extract-for-scope HTTP/1.1" 202 Accepted
+
+

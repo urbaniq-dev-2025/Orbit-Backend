@@ -7,7 +7,7 @@ from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Project, Scope, WorkspaceMember
+from app.models import Client, Project, Scope, WorkspaceMember
 from app.schemas.project import ProjectCreate, ProjectStatus, ProjectUpdate
 from app.services.workspaces import WorkspaceAccessError, WorkspaceNotFoundError
 
@@ -101,11 +101,43 @@ async def create_project(
     if not has_access:
         raise ProjectAccessError("Access denied")
 
+    # Handle client_id if provided
+    client_name = payload.client_name
+    client_id = payload.client_id
+    
+    if client_id:
+        # Validate client exists and belongs to the same workspace
+        client_stmt = select(Client).where(
+            Client.id == client_id,
+            Client.workspace_id == payload.workspace_id,
+        )
+        client_result = await session.execute(client_stmt)
+        client = client_result.scalar_one_or_none()
+        
+        if not client:
+            raise ValueError("Client not found or does not belong to this workspace")
+        
+        # Sync client_name from client if not provided
+        if not client_name:
+            client_name = client.name
+    elif client_name:
+        # Backward compatibility: try to find client by name in the same workspace
+        client_stmt = select(Client).where(
+            Client.name == client_name,
+            Client.workspace_id == payload.workspace_id,
+        )
+        client_result = await session.execute(client_stmt)
+        client = client_result.scalar_one_or_none()
+        
+        if client:
+            client_id = client.id
+
     project = Project(
         workspace_id=payload.workspace_id,
         name=payload.name,
         description=payload.description,
-        client_name=payload.client_name,
+        client_id=client_id,
+        client_name=client_name,
         status=payload.status,
         created_by=user_id,
     )
@@ -126,10 +158,42 @@ async def update_project(
         project.name = payload.name
     if payload.description is not None:
         project.description = payload.description
-    if payload.client_name is not None:
-        project.client_name = payload.client_name
     if payload.status is not None:
         project.status = payload.status
+    
+    # Handle client_id update
+    if payload.client_id is not None:
+        # Validate client exists and belongs to the same workspace
+        client_stmt = select(Client).where(
+            Client.id == payload.client_id,
+            Client.workspace_id == project.workspace_id,
+        )
+        client_result = await session.execute(client_stmt)
+        client = client_result.scalar_one_or_none()
+        
+        if not client:
+            raise ValueError("Client not found or does not belong to this workspace")
+        
+        project.client_id = payload.client_id
+        # Sync client_name from client
+        project.client_name = client.name
+    elif payload.client_name is not None:
+        # Backward compatibility: update client_name and try to find matching client
+        project.client_name = payload.client_name
+        
+        # Try to find client by name in the same workspace
+        client_stmt = select(Client).where(
+            Client.name == payload.client_name,
+            Client.workspace_id == project.workspace_id,
+        )
+        client_result = await session.execute(client_stmt)
+        client = client_result.scalar_one_or_none()
+        
+        if client:
+            project.client_id = client.id
+        else:
+            # If no matching client found, clear client_id
+            project.client_id = None
 
     await session.commit()
     await session.refresh(project)
@@ -193,4 +257,3 @@ async def assign_project_team(
     await session.commit()
     await session.refresh(project)
     return project
-

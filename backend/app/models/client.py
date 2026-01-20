@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -48,3 +48,4 @@ class Client(Base):
     last_activity: Mapped[Optional[DateTime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     workspace: Mapped["Workspace"] = relationship("Workspace", back_populates="clients")
+    projects: Mapped[List["Project"]] = relationship("Project", back_populates="client")

@@ -11,18 +11,15 @@ from clarivo_ingestion.core.config import Settings
 from clarivo_ingestion.core.logging import get_logger
 from clarivo_ingestion.exporters import scope_to_excel_bytes, scope_to_pdf_bytes
 from clarivo_ingestion.schemas.documents import (
-    ClarificationCategory,
     ClarificationItem,
     ClarificationListResponse,
     ClarificationResponseRequest,
-    ClarificationStatus,
     DocumentCreateResponse,
     DocumentMetadata,
     DocumentRecord,
     DocumentStage,
     DocumentStatus,
     DocumentStatusResponse,
-    ModuleListItem,
     TextDocumentCreateRequest,
 )
 from clarivo_ingestion.schemas.scope import ScopeDocument, OutputFormatScopeDocument
@@ -101,8 +98,8 @@ class DocumentService:
             doc_id=doc_id,
             source_type=request.source_type,
             metadata=request.metadata,
-            status=DocumentStatus.PROCESSING,
-            stage=DocumentStage.INGESTION,
+            status="processing",
+            stage="ingestion",
             progress=20,
             content_length=len(request.content),
             content=request.content,
@@ -228,21 +225,21 @@ class DocumentService:
         self, record: DocumentRecord, *, content_length: int
     ) -> None:
         if content_length >= self._settings.clarification_min_length:
-            record.status = DocumentStatus.READY_FOR_PREPROCESSING
-            record.stage = DocumentStage.PREPROCESSING
+            record.status = "processing"
+            record.stage = "generation"
             record.progress = 100
             record.touch()
             await self._generate_scope(record, save=True)
             logger.info("Document %s ready for preprocessing", record.doc_id)
             return
 
-        clarification = ClarificationItem.create_with_timeout(
+        clarification = ClarificationItem(
+            clarification_id=uuid4(),
             question="Please provide additional context: personas involved, goals, and KPIs discussed.",
-            category=ClarificationCategory.CONTEXT,
-            timeout_hours=self._settings.clarification_timeout_hours,
+            status="pending",
         )
-        record.status = DocumentStatus.AWAITING_CLARIFICATION
-        record.stage = DocumentStage.CLARIFICATION
+        record.status = "processing"
+        record.stage = "clarification"
         record.progress = 40
         record.clarifications.append(clarification)
         record.touch()
@@ -254,11 +251,13 @@ class DocumentService:
         now = datetime.now(timezone.utc)
         for clarification in record.clarifications:
             if (
-                clarification.status == ClarificationStatus.OPEN
+                clarification.status == "pending"
                 and clarification.expires_at is not None
                 and clarification.expires_at < now
             ):
-                clarification.status = ClarificationStatus.EXPIRED
+                # Note: ClarificationItem status is Literal["pending", "answered"]
+                # We can't set it to "expired" directly, but we can mark it as answered with a note
+                clarification.status = "answered"
                 changed = True
         if changed:
             record.touch()

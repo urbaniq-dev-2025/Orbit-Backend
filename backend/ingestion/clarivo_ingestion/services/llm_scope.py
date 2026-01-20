@@ -35,22 +35,40 @@ _CANONICAL_MODULES = [
 
 _SYSTEM_PROMPT = (
     "You are an expert Senior Business Analyst at a top software development agency. "
-    "Your task is to analyze a client requirement document and extract structured information into a comprehensive scope document.\n\n"
+    "Your task is to analyze a client requirement document and extract structured information into a comprehensive scope document with hours estimation.\n\n"
     "CRITICAL INSTRUCTIONS:\n"
     "1. Read the ENTIRE document carefully before extracting information\n"
     "2. Extract information accurately - do not paraphrase or summarize unless necessary\n"
     "3. Group related functionality into logical modules\n"
     "4. Extract specific features with clear names and detailed descriptions\n"
-    "5. Identify user personas, their goals, and pain points\n"
-    "6. Extract functional, technical, and non-functional requirements\n"
-    "7. Only include information that is explicitly stated in the document\n"
-    "8. If information is missing, leave arrays empty - do not invent details\n\n"
+    "5. Break down features into sub-features for granular estimation\n"
+    "6. Estimate hours for each sub-feature based on complexity and market standards\n"
+    "7. Identify user personas, their goals, and pain points\n"
+    "8. Extract functional, technical, and non-functional requirements\n"
+    "9. Only include information that is explicitly stated in the document\n"
+    "10. If information is missing, leave arrays empty - do not invent details\n\n"
     "When organizing modules and features:\n"
     "- Group features by functional area (e.g., Authentication, Menu, Payments, etc.)\n"
     "- Use clear, descriptive names for modules (e.g., 'Customer Profile', 'Menu & Ordering', 'Payment & Checkout')\n"
     "- Each feature should have a meaningful name and a detailed summary describing what it does\n"
+    "- Break down features into sub-features (e.g., 'User Login' → 'Email/Password Login', 'Social Login')\n"
     "- Extract acceptance criteria from the document text\n"
     "- Set priority (P1, P2, P3) based on document language (must/critical = P1, should/nice-to-have = P2, future = P3)\n\n"
+    "HOURS ESTIMATION GUIDELINES:\n"
+    "For each sub-feature, estimate hours considering a mid-level developer with 3 years of experience:\n"
+    "- Low Complexity: 4-8 hours total (Development: 3-5h, Testing: 1-2h, Code Review: 0.5h, Documentation: 0.5h)\n"
+    "  Examples: Simple CRUD operations, basic forms, read-only views, simple data display\n"
+    "- Medium Complexity: 8-16 hours total (Development: 6-10h, Testing: 2-3h, Code Review: 1h, Documentation: 1h)\n"
+    "  Examples: Complex business logic, API integrations, moderate UI complexity, data validation\n"
+    "- High Complexity: 16-32 hours total (Development: 12-20h, Testing: 4-6h, Code Review: 2h, Documentation: 2h)\n"
+    "  Examples: Complex algorithms, multiple integrations, advanced UI/UX, performance optimization, real-time features\n"
+    "\n"
+    "Consider these factors when estimating:\n"
+    "- External integrations add 30% to development time\n"
+    "- UI components add 20% to development time and 30% to testing time\n"
+    "- Real-time features, complex algorithms, or performance-critical code increase complexity\n"
+    "- Always include time for testing, code review, and documentation\n"
+    "\n"
     "Return strictly valid JSON with the exact shape below. Do not include commentary, markdown code fences, or explanations.\n\n"
     "Expected JSON shape:\n"
     "{\n"
@@ -70,7 +88,33 @@ _SYSTEM_PROMPT = (
     "    {\n"
     '      "name": "string - module name (e.g., Customer Profile, Menu & Ordering)",\n'
     '      "description": "string - brief description of what this module does",\n'
-    '      "features": ["string"] - array of feature names (references to features array below)\n'
+    '      "features": [\n'
+    "        {\n"
+    '          "name": "string - feature name",\n'
+    '          "description": "string - feature description",\n'
+    '          "subFeatures": [\n'
+    "            {\n"
+    '              "name": "string - sub-feature name",\n'
+    '              "description": "string - detailed description",\n'
+    '              "complexity": "Low" | "Medium" | "High",\n'
+    '              "estimatedHours": number - total hours (4-8 for Low, 8-16 for Medium, 16-32 for High),\n'
+    '              "hoursBreakdown": {\n'
+    '                "development": number,\n'
+    '                "testing": number,\n'
+    '                "codeReview": number,\n'
+    '                "documentation": number,\n'
+    '                "total": number,\n'
+    '                "confidence": number (0-1)\n'
+    "              },\n"
+    '              "assumptions": ["string"] - assumptions for this estimate,\n'
+    '              "dependencies": ["string"] - other sub-features this depends on\n'
+    "            }\n"
+    "          ],\n"
+    '          "totalHours": number - sum of all sub-feature hours,\n'
+    '          "priority": "P1" | "P2" | "P3"\n'
+    "        }\n"
+    "      ],\n"
+    '      "totalHours": number - sum of all feature hours\n'
     "    }\n"
     "  ],\n"
     '  "features": [\n'
@@ -101,15 +145,22 @@ _SYSTEM_PROMPT = (
     "    {\n"
     '      "question": "string - question that needs clarification"\n'
     "    }\n"
-    "  ]\n"
+    "  ],\n"
+    '  "totalProjectHours": number - sum of all module hours,\n'
+    '  "estimatedTimelineWeeks": number - estimated weeks based on team size (optional),\n'
+    '  "teamSizeRecommendation": number - recommended team size (optional)\n'
     "}\n\n"
     "IMPORTANT:\n"
     "- Extract information accurately from the document - do not make up details\n"
     "- Use the document's own language and terminology when possible\n"
     "- Group related features into logical modules\n"
-    "- Ensure feature names in modules.features array match names in features array\n"
+    "- Break down features into sub-features for accurate hours estimation\n"
+    "- Estimate hours realistically based on complexity - use market standards\n"
+    "- Include hours breakdown (development, testing, code review, documentation) for each sub-feature\n"
+    "- Set confidence scores (0.5-1.0) based on how clear the requirements are\n"
     "- Be thorough but concise - extract all relevant information\n"
-    "- All arrays can be empty if no information is found in the document"
+    "- All arrays can be empty if no information is found in the document\n"
+    "- Calculate totalProjectHours as sum of all module totalHours"
 )
 
 _USER_TEMPLATE = (
@@ -143,19 +194,20 @@ class LLMDocumentScopeGenerator:
 
     def __init__(self, settings: Settings, input_dir: Path | None = None, output_dir: Path | None = None) -> None:
         self._settings = settings
-        # Prefer Gemini, then OpenAI, then Groq
-        if (self._settings.gemini_api_key is None and 
-            self._settings.openai_api_key is None and 
+        # Prefer OpenAI (for RAG), then Gemini, then Groq
+        if (self._settings.openai_api_key is None and 
+            self._settings.gemini_api_key is None and 
             self._settings.groq_api_key is None):
-            raise self.ConfigurationError("Missing GEMINI_API_KEY, OPENAI_API_KEY, or GROQ_API_KEY for LLM scope generation.")
+            raise self.ConfigurationError("Missing OPENAI_API_KEY, GEMINI_API_KEY, or GROQ_API_KEY for LLM scope generation.")
         
-        # Determine which API to use (priority: Gemini > OpenAI > Groq)
-        if self._settings.gemini_api_key is not None:
+        # Determine which API to use (priority: OpenAI > Gemini > Groq)
+        # OpenAI is preferred for RAG model consistency
+        if self._settings.openai_api_key is not None:
+            self._api_provider = "openai"
+            logger.info("Using OpenAI API for LLM scope generation (RAG-enabled)")
+        elif self._settings.gemini_api_key is not None:
             self._api_provider = "gemini"
             logger.info("Using Gemini API for LLM scope generation")
-        elif self._settings.openai_api_key is not None:
-            self._api_provider = "openai"
-            logger.info("Using OpenAI API for LLM scope generation")
         else:
             self._api_provider = "groq"
             logger.info("Using Groq API for LLM scope generation")
@@ -169,24 +221,38 @@ class LLMDocumentScopeGenerator:
             except Exception as exc:
                 logger.warning("Failed to initialize RAG retriever: %s. Continuing without RAG examples.", exc)
 
-    async def generate(self, content: str) -> ScopeDocument:
+    async def generate(self, content: str, template_structure: dict | None = None) -> ScopeDocument:
+        """
+        Generate scope document from content.
+        
+        Args:
+            content: Document text to process
+            template_structure: Optional template structure to guide module organization
+        """
         if not content.strip():
             raise self.ParseError("No content available for LLM scope generation.")
 
         if self._api_provider == "gemini":
-            raw_content = await self._call_gemini_api(content)
+            raw_content = await self._call_gemini_api(content, template_structure)
         else:
-            raw_content = await self._call_openai_compatible_api(content)
+            raw_content = await self._call_openai_compatible_api(content, template_structure)
         
-        scope = self._parse_scope(raw_content)
-        module_count = len(scope.modules) if scope.modules else 0
-        feature_count = len(scope.features) if scope.features else 0
-        logger.info("LLM scope generation succeeded with %d modules and %d features.", module_count, feature_count)
-        return scope
+        try:
+            scope = self._parse_scope(raw_content)
+            module_count = len(scope.modules) if scope.modules else 0
+            feature_count = len(scope.features) if scope.features else 0
+            logger.info("LLM scope generation succeeded with %d modules and %d features.", module_count, feature_count)
+            return scope
+        except self.ParseError as e:
+            # If JSON parsing fails, log the raw content for debugging
+            logger.error(f"JSON parsing failed. Raw content length: {len(raw_content)} chars")
+            logger.debug(f"Raw content preview (first 5000 chars):\n{raw_content[:5000]}")
+            # Re-raise to let caller handle (may want to fall back to heuristic parser)
+            raise
     
-    async def _call_gemini_api(self, content: str) -> str:
+    async def _call_gemini_api(self, content: str, template_structure: dict | None = None) -> str:
         """Call Gemini API with its specific format."""
-        user_content = self._build_user_message(content)
+        user_content = self._build_user_message(content, template_structure)
         
         # Gemini uses a different payload structure with systemInstruction
         payload = {
@@ -237,9 +303,9 @@ class LLMDocumentScopeGenerator:
 
         return self._extract_gemini_message(response_data)
     
-    async def _call_openai_compatible_api(self, content: str) -> str:
+    async def _call_openai_compatible_api(self, content: str, template_structure: dict | None = None) -> str:
         """Call OpenAI-compatible API (OpenAI or Groq)."""
-        payload = self._build_payload(content)
+        payload = self._build_payload(content, template_structure)
         
         # Use OpenAI or Groq based on available API key
         if self._api_provider == "openai":
@@ -261,12 +327,14 @@ class LLMDocumentScopeGenerator:
             logger.info("Calling %s API: %s (payload: %d bytes, model: %s)", 
                        provider_name, api_url, payload_size, payload.get("model", "unknown"))
             logger.debug("Full payload (first 500 chars): %s", json.dumps(payload)[:500])
-            async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=30.0)) as client:
+            # Increased timeout for large documents: 600s (10 minutes) for read, 30s for connect
+            # OpenAI API can take longer for large payloads and complex requests
+            async with httpx.AsyncClient(timeout=httpx.Timeout(600.0, connect=30.0, read=600.0)) as client:
                 response = await client.post(api_url, headers=headers, json=payload)
                 response.raise_for_status()
         except httpx.TimeoutException as exc:
-            logger.error("%s API request timed out after 120s: %s", provider_name, str(exc))
-            raise self.ProviderError(f"{provider_name} API request timed out. The request may be too large or the API is slow.") from exc
+            logger.error("%s API request timed out after 600s: %s", provider_name, str(exc))
+            raise self.ProviderError(f"{provider_name} API request timed out after 10 minutes. The request may be too large or the API is slow. Please try with a smaller document or split the content.") from exc
         except httpx.ConnectTimeout as exc:
             logger.error("%s API connection timeout: %s", provider_name, str(exc))
             raise self.ProviderError(f"Failed to connect to {provider_name} API (connection timeout)") from exc
@@ -280,9 +348,9 @@ class LLMDocumentScopeGenerator:
 
         return self._extract_message(response.json())
 
-    def _build_payload(self, content: str) -> dict[str, Any]:
-        # Build user message with RAG examples if available
-        user_content = self._build_user_message(content)
+    def _build_payload(self, content: str, template_structure: dict | None = None) -> dict[str, Any]:
+        # Build user message with RAG examples and template guidance if available
+        user_content = self._build_user_message(content, template_structure)
         
         # Use appropriate model based on API
         if self._api_provider == "openai":
@@ -360,9 +428,22 @@ class LLMDocumentScopeGenerator:
             logger.error("Unexpected Gemini response structure: %s", json.dumps(data, indent=2))
             raise self.ProviderError("Unexpected Gemini response structure.") from exc
     
-    def _build_user_message(self, content: str) -> str:
-        """Build the user message with RAG examples if available."""
+    def _build_user_message(self, content: str, template_structure: dict | None = None) -> str:
+        """
+        Build the user message with RAG examples and template guidance if available.
+        
+        Args:
+            content: Document text to process
+            template_structure: Optional template structure to guide module organization
+        """
         parts = []
+        
+        # Add template structure guidance if provided
+        if template_structure:
+            template_guidance = self._format_template_guidance(template_structure)
+            if template_guidance:
+                parts.append(template_guidance)
+                logger.info("Including template structure guidance in prompt")
         
         # Add RAG examples if retriever is available
         if self._rag_retriever is not None:
@@ -379,6 +460,38 @@ class LLMDocumentScopeGenerator:
         parts.append(_USER_TEMPLATE.format(document_text=content.strip()))
         
         return "\n".join(parts)
+    
+    def _format_template_guidance(self, template_structure: dict) -> str:
+        """Format template structure as guidance for the LLM."""
+        sections = template_structure.get("sections", [])
+        if not sections:
+            return ""
+        
+        parts = [
+            "=== TEMPLATE STRUCTURE GUIDANCE ===",
+            "Use the following template structure to organize modules and features:",
+            "",
+        ]
+        
+        for section in sections:
+            section_title = section.get("title", "Untitled")
+            section_type = section.get("section_type", "")
+            section_desc = section.get("description", "")
+            
+            parts.append(f"- {section_title}")
+            if section_type:
+                parts.append(f"  Type: {section_type}")
+            if section_desc:
+                parts.append(f"  Description: {section_desc}")
+            parts.append("")
+        
+        parts.append("IMPORTANT: Organize modules and features according to this template structure.")
+        parts.append("The template provides guidance on how to group related functionality.")
+        parts.append("")
+        parts.append("=== END TEMPLATE GUIDANCE ===")
+        parts.append("")
+        
+        return "\n".join(parts)
 
     @staticmethod
     def _extract_message(data: dict[str, Any]) -> str:
@@ -390,19 +503,55 @@ class LLMDocumentScopeGenerator:
 
     def _parse_scope(self, raw_content: str) -> ScopeDocument:
         cleaned = self._strip_code_fences(raw_content)
+        
+        # Try to parse directly first
         try:
-            return ScopeDocument.model_validate_json(cleaned)
-        except ValidationError as exc:
-            logger.debug("Direct JSON validation failed (%s). Attempting to locate JSON block.", exc)
-            json_candidate = self._extract_json_block(cleaned)
-            if json_candidate is None:
-                raise self.ParseError("LLM response did not contain valid JSON.") from exc
+            parsed_data = json.loads(cleaned)
+        except json.JSONDecodeError as e:
+            logger.warning(f"Direct JSON parse failed: {e}. Attempting to fix common JSON issues...")
+            # Try to fix common JSON issues
+            fixed_json = self._fix_json_common_issues(cleaned)
             try:
-                return ScopeDocument.model_validate_json(json_candidate)
-            except ValidationError as inner_exc:
-                logger.error("LLM response failed schema validation: %s", inner_exc)
-                logger.debug("Failed JSON content: %s", json_candidate[:500])
-                raise self.ParseError("LLM response could not be coerced into ScopeDocument.") from inner_exc
+                parsed_data = json.loads(fixed_json)
+                logger.info("Successfully parsed JSON after fixing common issues")
+            except json.JSONDecodeError as e2:
+                logger.warning(f"Fixed JSON still invalid: {e2}. Trying to extract JSON block...")
+                # Try to extract JSON block
+                json_candidate = self._extract_json_block(cleaned)
+                if json_candidate is None:
+                    # Log the problematic content for debugging (first 2000 chars)
+                    logger.error(f"Failed to extract valid JSON. Content preview (first 2000 chars):\n{cleaned[:2000]}")
+                    logger.error(f"JSON error at line {e.lineno}, column {e.colno}: {e.msg}")
+                    raise self.ParseError(f"LLM response did not contain valid JSON. Error at line {e.lineno}, column {e.colno}: {e.msg}")
+                # Try to fix the extracted block too
+                fixed_candidate = self._fix_json_common_issues(json_candidate)
+                try:
+                    parsed_data = json.loads(fixed_candidate)
+                    logger.info("Successfully parsed extracted JSON block after fixing")
+                except json.JSONDecodeError as e3:
+                    logger.error(f"Extracted JSON block still invalid: {e3}")
+                    logger.error(f"JSON block preview (first 2000 chars):\n{json_candidate[:2000]}")
+                    raise self.ParseError(f"LLM response did not contain valid JSON even after extraction. Error: {e3.msg}")
+        
+        # Transform modules.features from objects to strings (feature names)
+        if "modules" in parsed_data and isinstance(parsed_data["modules"], list):
+            for module in parsed_data["modules"]:
+                if "features" in module and isinstance(module["features"], list):
+                    # Extract feature names if features are objects
+                    feature_names = []
+                    for feature in module["features"]:
+                        if isinstance(feature, dict) and "name" in feature:
+                            feature_names.append(feature["name"])
+                        elif isinstance(feature, str):
+                            feature_names.append(feature)
+                    module["features"] = feature_names
+        
+        try:
+            return ScopeDocument.model_validate(parsed_data)
+        except ValidationError as exc:
+            logger.error("LLM response failed schema validation: %s", exc)
+            logger.debug("Failed JSON content: %s", json.dumps(parsed_data, indent=2)[:1000])
+            raise self.ParseError("LLM response could not be coerced into ScopeDocument.") from exc
 
     @staticmethod
     def _strip_code_fences(text: str) -> str:
@@ -415,14 +564,77 @@ class LLMDocumentScopeGenerator:
 
     @staticmethod
     def _extract_json_block(text: str) -> str | None:
+        # Try to find JSON object boundaries more accurately
+        # Look for opening brace and try to find matching closing brace
+        start_idx = text.find('{')
+        if start_idx == -1:
+            return None
+        
+        # Count braces to find the matching closing brace
+        brace_count = 0
+        in_string = False
+        escape_next = False
+        
+        for i in range(start_idx, len(text)):
+            char = text[i]
+            
+            if escape_next:
+                escape_next = False
+                continue
+            
+            if char == '\\':
+                escape_next = True
+                continue
+            
+            if char == '"':
+                in_string = not in_string
+                continue
+            
+            if not in_string:
+                if char == '{':
+                    brace_count += 1
+                elif char == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        # Found matching closing brace
+                        candidate = text[start_idx:i+1]
+                        return candidate
+        
+        # If we didn't find a matching brace, try the simple regex approach
         match = re.search(r"\{.*\}", text, re.DOTALL)
-        if not match:
-            return None
-        candidate = match.group(0)
-        try:
-            json.loads(candidate)
-        except json.JSONDecodeError:
-            return None
-        return candidate
+        if match:
+            return match.group(0)
+        return None
+    
+    @staticmethod
+    def _fix_json_common_issues(json_str: str) -> str:
+        """Fix common JSON issues that LLMs sometimes produce."""
+        fixed = json_str
+        
+        # Remove comments (JSON doesn't support comments)
+        fixed = re.sub(r'//.*?$', '', fixed, flags=re.MULTILINE)
+        fixed = re.sub(r'/\*.*?\*/', '', fixed, flags=re.DOTALL)
+        
+        # Fix double opening braces (e.g., "{ { "name": ..." -> "{ "name": ...")
+        fixed = re.sub(r'\{\s*\{', '{', fixed)
+        
+        # Fix double closing braces (e.g., "} }" -> "}")
+        fixed = re.sub(r'\}\s*\}', '}', fixed)
+        
+        # Remove trailing commas before closing braces/brackets
+        fixed = re.sub(r',(\s*[}\]])', r'\1', fixed)
+        
+        # Fix unescaped quotes in strings (basic attempt)
+        # Replace single quotes with double quotes only in object keys (basic)
+        fixed = re.sub(r"(\w+):\s*'([^']*)'", r'\1: "\2"', fixed)
+        
+        # Fix missing commas between object properties (look for } followed by { or "key":)
+        # This is tricky, so we'll be conservative
+        fixed = re.sub(r'\}\s*(\{|"[^"]+"\s*:)', r'}, \1', fixed)
+        
+        # Fix missing commas between array elements
+        fixed = re.sub(r'\]\s*(\[|"[^"]+"|\{)', r'], \1', fixed)
+        
+        return fixed
 
 

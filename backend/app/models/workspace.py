@@ -85,6 +85,15 @@ class Workspace(Base):
     credit_balance: Mapped[Optional["WorkspaceCreditBalance"]] = relationship(
         "WorkspaceCreditBalance", back_populates="workspace", uselist=False, cascade="all, delete-orphan"
     )
+    settings: Mapped[Optional["WorkspaceSettings"]] = relationship(
+        "WorkspaceSettings", back_populates="workspace", uselist=False, cascade="all, delete-orphan"
+    )
+    teams: Mapped[List["Team"]] = relationship(
+        "Team", back_populates="workspace", cascade="all, delete-orphan"
+    )
+    billing_history: Mapped[List["BillingHistory"]] = relationship(
+        "BillingHistory", back_populates="workspace", cascade="all, delete-orphan"
+    )
 
 
 class WorkspaceMember(Base):

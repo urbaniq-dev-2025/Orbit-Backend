@@ -69,4 +69,3 @@ async def get_admin_user(
         )
     
     return current_user
-

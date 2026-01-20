@@ -3,7 +3,8 @@ from __future__ import annotations
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
+from typing import Optional
 from sqlalchemy import func, select
 
 from app.api import deps
@@ -48,8 +49,10 @@ async def list_scopes(
     current_user=Depends(deps.get_current_user),
     workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
     project_id: Optional[uuid.UUID] = Query(None, alias="projectId"),
+    client_id: Optional[uuid.UUID] = Query(None, alias="clientId"),
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    is_favourite: Optional[bool] = Query(None, alias="isFavourite"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100, alias="pageSize"),
 ) -> ScopeListResponse:
@@ -61,15 +64,17 @@ async def list_scopes(
             current_user.id,
             workspace_id=workspace_id,
             project_id=project_id,
+            client_id=client_id,
             status=scope_status,
             search=search,
+            is_favourite=is_favourite,
             page=page,
             page_size=page_size,
         )
 
-        # Get favourite status for each scope
+        # Get favourite status for each scope (if not already filtered)
         scope_ids = [s.id for s in scope_list]
-        favourites = {}
+        favourites = set()
         if scope_ids:
             fav_stmt = select(Favourite.scope_id).where(
                 Favourite.scope_id.in_(scope_ids),
@@ -80,6 +85,26 @@ async def list_scopes(
 
         summaries = []
         for scope in scope_list:
+            # Get project and client info
+            project_name = None
+            client_id = None
+            client_name = None
+            
+            if scope.project:
+                project_name = scope.project.name
+                if scope.project.client:
+                    client_id = scope.project.client.id
+                    client_name = scope.project.client.name
+                elif scope.project.client_id:
+                    # Client exists but not loaded, fetch it
+                    from app.models import Client
+                    client_stmt = select(Client).where(Client.id == scope.project.client_id)
+                    client_result = await session.execute(client_stmt)
+                    client = client_result.scalar_one_or_none()
+                    if client:
+                        client_id = client.id
+                        client_name = client.name
+
             summaries.append(
                 ScopeSummary(
                     id=scope.id,
@@ -95,6 +120,10 @@ async def list_scopes(
                     created_by=scope.created_by,
                     created_at=scope.created_at,
                     updated_at=scope.updated_at,
+                    project_name=project_name,
+                    client_id=client_id,
+                    client_name=client_name,
+                    is_favourite=scope.id in favourites,
                 )
             )
 
@@ -111,15 +140,162 @@ async def list_scopes(
 
 @router.post("", response_model=ScopeDetail, status_code=status.HTTP_201_CREATED)
 async def create_scope(
-    payload: ScopeCreate,
+    request: Request,
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
+    file: Optional[UploadFile] = File(None),
 ) -> ScopeDetail:
-    """Create a new scope."""
+    """
+    Create a new scope with optional input processing.
+    
+    Supports:
+    - Template selection (templateId)
+    - Multiple input sources (inputType: pdf, text, speech, ai_generate, google_docs, notion)
+    - File uploads (for PDF or speech)
+    - AI model selection (aiModel)
+    - Hours estimation preferences (developerLevel, developerExperienceYears)
+    """
     try:
-        scope = await scope_service.create_scope(session, current_user.id, payload)
+        from app.services.scope_input_handler import create_scope_with_input
+        from app.core.logging import get_logger
+        
+        logger = get_logger(__name__)
+        
+        # Parse payload from request body (handles both JSON and form data)
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in content_type:
+            body_data = await request.json()
+            # Clean up templateId - handle string identifiers or convert null/empty to None
+            if "templateId" in body_data:
+                template_id_value = body_data["templateId"]
+                if template_id_value is None or template_id_value == "":
+                    body_data["templateId"] = None
+                elif isinstance(template_id_value, str):
+                    # Check if it's a valid UUID format (36 chars with dashes)
+                    is_uuid_format = len(template_id_value) == 36 and template_id_value.count("-") == 4
+                    
+                    if not is_uuid_format:
+                        # If it's not a UUID format, try to find template by name/identifier
+                        try:
+                            from sqlalchemy import select
+                            from app.models import Template
+                            
+                            # Try to find template by name (case-insensitive)
+                            template_stmt = select(Template).where(
+                                Template.name.ilike(template_id_value),
+                                Template.type == "scope"
+                            ).limit(1)
+                            template_result = await session.execute(template_stmt)
+                            template = template_result.scalar_one_or_none()
+                            
+                            if template:
+                                body_data["templateId"] = str(template.id)
+                            else:
+                                # If not found, set to None (optional field)
+                                logger.warning(f"Template not found by name '{template_id_value}', proceeding without template")
+                                body_data["templateId"] = None
+                        except Exception as e:
+                            # If lookup fails, set to None
+                            logger.warning(f"Failed to lookup template by name '{template_id_value}': {e}")
+                            body_data["templateId"] = None
+                    # If it's already a valid UUID format, keep it as is
+            
+            # Clean up projectId - convert null/empty string to None
+            if "projectId" in body_data and (body_data["projectId"] is None or body_data["projectId"] == ""):
+                body_data["projectId"] = None
+            
+            # Clean up inputData - ensure it's a string if provided
+            if "inputData" in body_data:
+                if body_data["inputData"] is None:
+                    body_data["inputData"] = None
+                elif not isinstance(body_data["inputData"], str):
+                    # Convert to string if it's not already
+                    body_data["inputData"] = str(body_data["inputData"])
+            
+            payload = ScopeCreate(**body_data)
+        else:
+            # Form data
+            form_data = await request.form()
+            payload_dict = dict(form_data)
+            # Convert string values to appropriate types
+            if "workspaceId" in payload_dict:
+                payload_dict["workspaceId"] = uuid.UUID(payload_dict["workspaceId"])
+            if "projectId" in payload_dict and payload_dict["projectId"]:
+                payload_dict["projectId"] = uuid.UUID(payload_dict["projectId"])
+            
+            # Handle templateId - support both UUID and string identifiers
+            if "templateId" in payload_dict:
+                template_id_value = payload_dict["templateId"]
+                if template_id_value is None or template_id_value == "":
+                    payload_dict["templateId"] = None
+                elif isinstance(template_id_value, str):
+                    # Check if it's a valid UUID format (36 chars with dashes)
+                    is_uuid_format = len(template_id_value) == 36 and template_id_value.count("-") == 4
+                    
+                    if not is_uuid_format:
+                        # If it's not a UUID format, try to find template by name/identifier
+                        try:
+                            from sqlalchemy import select
+                            from app.models import Template
+                            
+                            # Try to find template by name (case-insensitive)
+                            template_stmt = select(Template).where(
+                                Template.name.ilike(template_id_value),
+                                Template.type == "scope"
+                            ).limit(1)
+                            template_result = await session.execute(template_stmt)
+                            template = template_result.scalar_one_or_none()
+                            
+                            if template:
+                                payload_dict["templateId"] = str(template.id)
+                            else:
+                                # If not found, set to None (optional field)
+                                logger.warning(f"Template not found by name '{template_id_value}', proceeding without template")
+                                payload_dict["templateId"] = None
+                        except Exception as e:
+                            # If lookup fails, set to None
+                            logger.warning(f"Failed to lookup template by name '{template_id_value}': {e}")
+                            payload_dict["templateId"] = None
+                    else:
+                        # It's a valid UUID format, convert it
+                        payload_dict["templateId"] = uuid.UUID(template_id_value)
+            
+            if "developerExperienceYears" in payload_dict:
+                payload_dict["developerExperienceYears"] = int(payload_dict["developerExperienceYears"])
+            payload = ScopeCreate(**payload_dict)
+        
+        # If file is uploaded, read it
+        file_content = None
+        filename = None
+        if file:
+            file_content = await file.read()
+            filename = file.filename
+        
+        # Use enhanced scope creation with input processing
+        if payload.input_type and (payload.input_data or payload.input_url or file_content):
+            result = await create_scope_with_input(
+                session,
+                current_user.id,
+                payload,
+                file_upload=file_content,
+                filename=filename,
+            )
+            scope_id = result["scope_id"]
+        else:
+            # Standard scope creation without input processing
+            scope = await scope_service.create_scope(session, current_user.id, payload)
+            # Ensure scope is committed before fetching
+            await session.commit()
+            await session.refresh(scope)
+            scope_id = scope.id
+        
+        # Fetch and return scope details
+        scope = await scope_service.get_scope(session, scope_id, current_user.id, include_sections=True)
         return await _build_scope_detail(session, scope, current_user.id)
     except Exception as exc:
+        from app.core.logging import get_logger
+        logger = get_logger(__name__)
+        logger.error(f"Error creating scope: {exc}", exc_info=True)
         raise _map_scope_exception(exc) from exc
 
 
@@ -480,7 +656,7 @@ async def extract_scope_from_document(
     """
     Trigger AI extraction from uploaded document.
     Returns extraction job ID for status polling.
-    Note: Integration with ingestion service needs to be configured.
+    Now supports template guidance and hours estimation.
     """
     try:
         result = await scope_service.extract_scope_from_document(
@@ -489,6 +665,10 @@ async def extract_scope_from_document(
             current_user.id,
             upload_id=payload.upload_id,
             extraction_type=payload.extraction_type,
+            template_id=payload.template_id,
+            ai_model=payload.ai_model,
+            developer_level=payload.developer_level,
+            developer_experience_years=payload.developer_experience_years,
         )
         return ScopeExtractResponse(
             extraction_id=result["extraction_id"],

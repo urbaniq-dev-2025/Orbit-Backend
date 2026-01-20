@@ -3,10 +3,23 @@ from __future__ import annotations
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
 from app.api import deps
-from app.schemas.client import ClientListResponse, ClientSummary
+from app.schemas.client import (
+    ClientCreate,
+    ClientDetail,
+    ClientListResponse,
+    ClientLogoResponse,
+    ClientProjectItem,
+    ClientProjectsResponse,
+    ClientScopeItem,
+    ClientScopesResponse,
+    ClientStatsResponse,
+    ClientSummary,
+    ClientUpdate,
+    RecentProject,
+)
 from app.services import client as client_service
 
 router = APIRouter()
@@ -34,28 +47,42 @@ async def list_clients(
             page_size=page_size,
         )
 
-        client_summaries = [
-            ClientSummary(
-                id=c.id,
-                workspace_id=c.workspace_id,
-                name=c.name,
-                logo_url=c.logo_url,
-                status=c.status,
-                industry=c.industry,
-                contact_name=c.contact_name,
-                contact_email=c.contact_email,
-                contact_phone=c.contact_phone,
-                health_score=c.health_score,
-                city=c.city,
-                state=c.state,
-                country=c.country,
-                company_size=c.company_size,
-                created_at=c.created_at,
-                updated_at=c.updated_at,
-                last_activity=c.last_activity,
+        # Build client summaries with computed fields
+        client_summaries = []
+        for c in clients:
+            # Compute location
+            location = client_service._compute_location(c.city, c.state, c.country)
+            
+            # Get project and scope counts
+            project_count = await client_service._get_client_project_count(session, c)
+            scope_count = await client_service._get_client_scope_count(session, c)
+            
+            client_summaries.append(
+                ClientSummary(
+                    id=c.id,
+                    workspace_id=c.workspace_id,
+                    name=c.name,
+                    logo_url=c.logo_url,
+                    status=c.status,
+                    industry=c.industry,
+                    contact_name=c.contact_name,
+                    contact_email=c.contact_email,
+                    contact_phone=c.contact_phone,
+                    health_score=c.health_score,
+                    source=c.source,
+                    notes=c.notes,
+                    location=location,
+                    city=c.city,
+                    state=c.state,
+                    country=c.country,
+                    company_size=c.company_size,
+                    project_count=project_count,
+                    scope_count=scope_count,
+                    created_at=c.created_at,
+                    updated_at=c.updated_at,
+                    last_activity=c.last_activity,
+                )
             )
-            for c in clients
-        ]
 
         return ClientListResponse(
             clients=client_summaries,
@@ -68,4 +95,420 @@ async def list_clients(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Unable to retrieve clients.",
+        ) from exc
+
+
+@router.get("/{client_id}", response_model=ClientDetail)
+async def get_client(
+    client_id: uuid.UUID,
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+) -> ClientDetail:
+    """Get client details by ID."""
+    try:
+        client = await client_service.get_client(session, client_id, current_user.id)
+        
+        # Compute location
+        location = client_service._compute_location(client.city, client.state, client.country)
+        
+        # Get project and scope counts
+        project_count = await client_service._get_client_project_count(session, client)
+        scope_count = await client_service._get_client_scope_count(session, client)
+        
+        # Get recent projects (last 3)
+        projects, _ = await client_service.get_client_projects(
+            session, client_id, current_user.id, limit=3
+        )
+        recent_projects = [
+            RecentProject(
+                id=p.id,
+                name=p.name,
+                status=p.status,
+                updated_at=p.updated_at,
+            )
+            for p in projects
+        ]
+        
+        return ClientDetail(
+            id=client.id,
+            workspace_id=client.workspace_id,
+            name=client.name,
+            logo_url=client.logo_url,
+            status=client.status,
+            industry=client.industry,
+            contact_name=client.contact_name,
+            contact_email=client.contact_email,
+            contact_phone=client.contact_phone,
+            health_score=client.health_score,
+            source=client.source,
+            notes=client.notes,
+            location=location,
+            city=client.city,
+            state=client.state,
+            country=client.country,
+            company_size=client.company_size,
+            project_count=project_count,
+            scope_count=scope_count,
+            created_at=client.created_at,
+            updated_at=client.updated_at,
+            last_activity=client.last_activity,
+            recent_projects=recent_projects,
+        )
+    except client_service.ClientNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Client not found.",
+        )
+    except client_service.ClientAccessError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied.",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to retrieve client.",
+        ) from exc
+
+
+@router.post("", response_model=ClientSummary, status_code=status.HTTP_201_CREATED)
+async def create_client(
+    payload: ClientCreate,
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+) -> ClientSummary:
+    """Create a new client."""
+    try:
+        client = await client_service.create_client(session, current_user.id, payload)
+        
+        # Compute location
+        location = client_service._compute_location(client.city, client.state, client.country)
+        
+        return ClientSummary(
+            id=client.id,
+            workspace_id=client.workspace_id,
+            name=client.name,
+            logo_url=client.logo_url,
+            status=client.status,
+            industry=client.industry,
+            contact_name=client.contact_name,
+            contact_email=client.contact_email,
+            contact_phone=client.contact_phone,
+            health_score=client.health_score,
+            source=client.source,
+            notes=client.notes,
+            location=location,
+            city=client.city,
+            state=client.state,
+            country=client.country,
+            company_size=client.company_size,
+            project_count=0,
+            scope_count=0,
+            created_at=client.created_at,
+            updated_at=client.updated_at,
+            last_activity=client.last_activity,
+        )
+    except client_service.ClientAccessError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to workspace.",
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to create client.",
+        ) from exc
+
+
+@router.put("/{client_id}", response_model=ClientSummary)
+async def update_client(
+    client_id: uuid.UUID,
+    payload: ClientUpdate,
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+) -> ClientSummary:
+    """Update an existing client."""
+    try:
+        client = await client_service.update_client(session, client_id, current_user.id, payload)
+        
+        # Compute location
+        location = client_service._compute_location(client.city, client.state, client.country)
+        
+        # Get project and scope counts
+        project_count = await client_service._get_client_project_count(session, client)
+        scope_count = await client_service._get_client_scope_count(session, client)
+        
+        return ClientSummary(
+            id=client.id,
+            workspace_id=client.workspace_id,
+            name=client.name,
+            logo_url=client.logo_url,
+            status=client.status,
+            industry=client.industry,
+            contact_name=client.contact_name,
+            contact_email=client.contact_email,
+            contact_phone=client.contact_phone,
+            health_score=client.health_score,
+            source=client.source,
+            notes=client.notes,
+            location=location,
+            city=client.city,
+            state=client.state,
+            country=client.country,
+            company_size=client.company_size,
+            project_count=project_count,
+            scope_count=scope_count,
+            created_at=client.created_at,
+            updated_at=client.updated_at,
+            last_activity=client.last_activity,
+        )
+    except client_service.ClientNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Client not found.",
+        )
+    except client_service.ClientAccessError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied.",
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to update client.",
+        ) from exc
+
+
+@router.delete("/{client_id}", status_code=status.HTTP_200_OK)
+async def delete_client(
+    client_id: uuid.UUID,
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+) -> dict:
+    """Delete a client (soft delete by default)."""
+    try:
+        await client_service.delete_client(session, client_id, current_user.id, soft_delete=True)
+        return {"message": "Client deleted successfully"}
+    except client_service.ClientNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Client not found.",
+        )
+    except client_service.ClientAccessError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied.",
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to delete client.",
+        ) from exc
+
+
+@router.get("/stats", response_model=ClientStatsResponse)
+async def get_client_stats(
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
+) -> ClientStatsResponse:
+    """Get client statistics."""
+    try:
+        stats = await client_service.get_client_stats(
+            session, current_user.id, workspace_id=workspace_id
+        )
+        return ClientStatsResponse(**stats)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to retrieve client statistics.",
+        ) from exc
+
+
+@router.get("/{client_id}/projects", response_model=ClientProjectsResponse)
+async def get_client_projects(
+    client_id: uuid.UUID,
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+    limit: int = Query(10, ge=1, le=100),
+) -> ClientProjectsResponse:
+    """Get projects associated with a client."""
+    try:
+        projects, total = await client_service.get_client_projects(
+            session, client_id, current_user.id, limit=limit
+        )
+        
+        project_items = [
+            ClientProjectItem(
+                id=p.id,
+                name=p.name,
+                status=p.status,
+                description=p.description,
+                updated_at=p.updated_at,
+            )
+            for p in projects
+        ]
+        
+        return ClientProjectsResponse(projects=project_items, total=total)
+    except client_service.ClientNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Client not found.",
+        )
+    except client_service.ClientAccessError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied.",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to retrieve client projects.",
+        ) from exc
+
+
+@router.get("/{client_id}/scopes", response_model=ClientScopesResponse)
+async def get_client_scopes(
+    client_id: uuid.UUID,
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+    limit: int = Query(10, ge=1, le=100),
+) -> ClientScopesResponse:
+    """Get scopes associated with a client."""
+    try:
+        scopes, total = await client_service.get_client_scopes(
+            session, client_id, current_user.id, limit=limit
+        )
+        
+        scope_items = []
+        for scope in scopes:
+            project_name = scope.project.name if scope.project and scope.project_id else "No Project"
+            project_id = scope.project_id if scope.project_id else uuid.UUID("00000000-0000-0000-0000-000000000000")
+            scope_items.append(
+                ClientScopeItem(
+                    id=scope.id,
+                    name=scope.title,  # Scope uses 'title' field
+                    status=scope.status,
+                    project_id=project_id,
+                    project_name=project_name,
+                    updated_at=scope.updated_at,
+                )
+            )
+        
+        return ClientScopesResponse(scopes=scope_items, total=total)
+    except client_service.ClientNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Client not found.",
+        )
+    except client_service.ClientAccessError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied.",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to retrieve client scopes.",
+        ) from exc
+
+
+@router.post("/{client_id}/logo", response_model=ClientLogoResponse, status_code=status.HTTP_200_OK)
+async def upload_client_logo(
+    client_id: uuid.UUID,
+    session: deps.SessionDep,
+    file: UploadFile = File(...),
+    current_user=Depends(deps.get_current_user),
+) -> ClientLogoResponse:
+    """Upload a logo for a client."""
+    try:
+        # Validate file type
+        allowed_extensions = {".jpg", ".jpeg", ".png", ".webp"}
+        file_ext = None
+        if file.filename:
+            for ext in allowed_extensions:
+                if file.filename.lower().endswith(ext):
+                    file_ext = ext
+                    break
+
+        if not file_ext:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File type not supported. Allowed: {', '.join(allowed_extensions)}",
+            )
+
+        # Validate file size (5MB max)
+        MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+        file_content = await file.read()
+        file_size = len(file_content)
+
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File size exceeds maximum of {MAX_FILE_SIZE // (1024 * 1024)}MB",
+            )
+
+        # TODO: Upload file to storage (S3, Cloudinary, etc.)
+        # For now, create a placeholder file URL
+        # In production, this should:
+        # 1. Generate unique filename
+        # 2. Upload to storage service
+        # 3. Get public URL
+        # 4. Update client logo_url
+
+        import os
+        from pathlib import Path
+
+        # Placeholder: Save to local storage (for development)
+        # In production, use S3 or similar
+        upload_dir = Path("uploads") / "clients" / str(client_id)
+        upload_dir.mkdir(parents=True, exist_ok=True)
+
+        unique_filename = f"{uuid.uuid4()}{file_ext}"
+        file_path = upload_dir / unique_filename
+
+        # Save file
+        with open(file_path, "wb") as f:
+            f.write(file_content)
+
+        # Generate URL (placeholder - in production this would be a cloud storage URL)
+        logo_url = f"/uploads/clients/{client_id}/{unique_filename}"
+
+        # Update client logo
+        client = await client_service.update_client_logo(
+            session, client_id, current_user.id, logo_url
+        )
+
+        return ClientLogoResponse(logo_url=client.logo_url)
+    except client_service.ClientNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Client not found.",
+        )
+    except client_service.ClientAccessError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied.",
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unable to upload logo.",
         ) from exc

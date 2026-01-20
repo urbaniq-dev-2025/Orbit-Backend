@@ -106,6 +106,12 @@ async def update_profile(
         current_user.full_name = payload.full_name
     if payload.avatar_url is not None:
         current_user.avatar_url = payload.avatar_url
+    if payload.phone is not None:
+        current_user.phone = payload.phone
+    if payload.company is not None:
+        current_user.company = payload.company
+    if payload.job_role is not None:
+        current_user.job_role = payload.job_role
     
     await session.commit()
     await session.refresh(current_user)

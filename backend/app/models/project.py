@@ -14,6 +14,7 @@ class Project(Base):
     __table_args__ = (
         Index("ix_projects_workspace", "workspace_id"),
         Index("ix_projects_status", "status"),
+        Index("ix_projects_client", "client_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4)
@@ -22,7 +23,10 @@ class Project(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    client_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    client_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        GUID(), ForeignKey("clients.id", ondelete="SET NULL"), nullable=True
+    )
+    client_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # Kept for backward compatibility
     status: Mapped[str] = mapped_column(String(50), default="active", nullable=False)
     engagement_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -42,6 +46,7 @@ class Project(Base):
     )
 
     workspace: Mapped["Workspace"] = relationship("Workspace", back_populates="projects")
+    client: Mapped[Optional["Client"]] = relationship("Client", back_populates="projects")
     scopes: Mapped[List["Scope"]] = relationship(
         "Scope", back_populates="project", cascade="all, delete-orphan"
     )

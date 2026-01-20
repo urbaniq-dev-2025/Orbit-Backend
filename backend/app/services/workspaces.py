@@ -336,4 +336,3 @@ async def remove_member(
 
     await session.delete(member)
     await session.commit()
-

@@ -96,7 +96,9 @@ class PasswordResetCompleteRequest(BaseModel):
 class UserProfileUpdateRequest(BaseModel):
     full_name: Optional[str] = Field(None, alias="fullName")
     avatar_url: Optional[str] = Field(None, alias="avatarUrl")
+    phone: Optional[str] = Field(None, max_length=20)
+    company: Optional[str] = Field(None, max_length=255)
+    job_role: Optional[str] = Field(None, alias="role", max_length=100)  # Job title/role
 
     class Config:
         allow_population_by_field_name = True
-

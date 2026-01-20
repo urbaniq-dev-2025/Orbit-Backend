@@ -7,8 +7,11 @@ from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Document, Favourite, Scope, ScopeSection, Workspace, WorkspaceMember
+from app.core.logging import get_logger
+from app.models import Document, Favourite, Scope, ScopeSection, Workspace, WorkspaceMember, Project, Client
 from app.schemas.scope import ScopeCreate, ScopeStatus, ScopeUpdate
+
+logger = get_logger(__name__)
 
 
 class ScopeNotFoundError(Exception):
@@ -38,8 +41,10 @@ async def list_scopes(
     *,
     workspace_id: Optional[uuid.UUID] = None,
     project_id: Optional[uuid.UUID] = None,
+    client_id: Optional[uuid.UUID] = None,
     status: Optional[ScopeStatus] = None,
     search: Optional[str] = None,
+    is_favourite: Optional[bool] = None,
     page: int = 1,
     page_size: int = 20,
 ) -> tuple[List[Scope], int]:
@@ -55,8 +60,13 @@ async def list_scopes(
     if not accessible_workspace_ids:
         return [], 0
 
-    # Build query
-    stmt: Select[Scope] = select(Scope).where(Scope.workspace_id.in_(accessible_workspace_ids))
+    # Build query with joins for project and client info
+    stmt: Select[Scope] = (
+        select(Scope)
+        .outerjoin(Project, Scope.project_id == Project.id)
+        .outerjoin(Client, Project.client_id == Client.id)
+        .where(Scope.workspace_id.in_(accessible_workspace_ids))
+    )
 
     if workspace_id:
         if workspace_id not in accessible_workspace_ids:
@@ -65,6 +75,30 @@ async def list_scopes(
 
     if project_id:
         stmt = stmt.where(Scope.project_id == project_id)
+    
+    # Filter by client_id (via project relationship)
+    if client_id:
+        # Verify client belongs to accessible workspace
+        from app.models import Client
+        client_stmt = select(Client.id).where(
+            Client.id == client_id,
+            Client.workspace_id.in_(accessible_workspace_ids),
+        )
+        client_result = await session.execute(client_stmt)
+        if client_result.scalar_one_or_none() is None:
+            # Client not found or not accessible
+            return [], 0
+        
+        # Filter scopes by projects that belong to this client
+        project_ids_stmt = select(Project.id).where(Project.client_id == client_id)
+        project_ids_result = await session.execute(project_ids_stmt)
+        project_ids = [row[0] for row in project_ids_result.all()]
+        
+        if project_ids:
+            stmt = stmt.where(Scope.project_id.in_(project_ids))
+        else:
+            # Client has no projects, return empty
+            return [], 0
 
     if status:
         stmt = stmt.where(Scope.status == status)
@@ -78,7 +112,19 @@ async def list_scopes(
             )
         )
 
-    # Get total count
+    # Filter by favourite status if requested
+    if is_favourite is not None:
+        # Use a subquery to check favourite status
+        fav_subquery = select(Favourite.scope_id).where(Favourite.user_id == user_id)
+        
+        if is_favourite:
+            # Only scopes that are favourited by this user
+            stmt = stmt.where(Scope.id.in_(fav_subquery))
+        else:
+            # Only scopes that are NOT favourited by this user
+            stmt = stmt.where(~Scope.id.in_(fav_subquery))
+
+    # Get total count (before pagination)
     count_stmt = select(func.count()).select_from(stmt.subquery())
     count_result = await session.execute(count_stmt)
     total = count_result.scalar_one()
@@ -86,6 +132,11 @@ async def list_scopes(
     # Apply pagination
     offset = (page - 1) * page_size
     stmt = stmt.order_by(Scope.updated_at.desc()).offset(offset).limit(page_size)
+
+    # Load project and client relationships for efficient access
+    stmt = stmt.options(
+        selectinload(Scope.project).selectinload(Project.client)
+    )
 
     result = await session.execute(stmt)
     scopes = list(result.scalars().all())
@@ -151,8 +202,48 @@ async def create_scope(
     session.add(scope)
     await session.flush()
     await session.refresh(scope)
+    
+    # Commit the scope immediately so it's persisted
+    await session.commit()
+    await session.refresh(scope)
 
-    # TODO: If template_id is provided, apply template sections
+    # If template_id is provided, apply template sections
+    if payload.template_id:
+        from app.services import templates as template_service
+        
+        try:
+            template = await template_service.get_template(session, payload.template_id, user_id)
+            
+            # Verify template type is 'scope'
+            if template.type != "scope":
+                raise ScopeAccessError("Template type must be 'scope'")
+            
+            # Increment template usage count
+            template.usage_count += 1
+            await session.flush()
+            
+            # Extract sections from template
+            template_sections = template.sections.get("sections", [])
+            
+            # Create scope sections from template (one by one to avoid bulk insert issues)
+            for template_section in template_sections:
+                section = ScopeSection(
+                    scope_id=scope.id,
+                    title=template_section.get("title", "Untitled Section"),
+                    content=template_section.get("content", ""),
+                    section_type=template_section.get("section_type"),
+                    order_index=template_section.get("order", 0),
+                    ai_generated=False,
+                    confidence_score=0,
+                )
+                session.add(section)
+                await session.flush()  # Flush after each to get the ID
+        except template_service.TemplateNotFoundError:
+            # Template not found, continue without applying template
+            pass
+        except template_service.TemplateAccessError:
+            # User doesn't have access to template, continue without applying
+            pass
 
     return scope
 
@@ -466,10 +557,15 @@ async def upload_scope_document(
     file_size: int,
     mime_type: str,
     file_url: str,
+    extracted_text: Optional[str] = None,
 ) -> "Document":
     """
     Upload a document for a scope.
     Creates a Document record and links it to the scope.
+    
+    Args:
+        extracted_text: Optional extracted text content from the document.
+                        If provided, will be saved to document.extracted_text.
     """
     from app.models import Document
     from datetime import datetime
@@ -497,6 +593,7 @@ async def upload_scope_document(
         mime_type=mime_type,
         processing_status="pending",
         uploaded_by=user_id,
+        extracted_text=extracted_text,  # Save extracted text if provided
     )
 
     session.add(document)
@@ -513,6 +610,10 @@ async def extract_scope_from_document(
     *,
     upload_id: uuid.UUID,
     extraction_type: str,
+    template_id: Optional[uuid.UUID] = None,
+    ai_model: Optional[str] = None,
+    developer_level: str = "mid",
+    developer_experience_years: int = 3,
 ) -> dict:
     """
     Trigger AI extraction from uploaded document.
@@ -520,8 +621,11 @@ async def extract_scope_from_document(
     Returns extraction job ID and status.
     """
     from app.models import Document
+    from app.core.config import get_settings
     from datetime import datetime
+    import httpx
 
+    settings = get_settings()
     scope = await get_scope(session, scope_id, user_id, include_sections=False)
 
     # Verify document belongs to scope
@@ -535,25 +639,149 @@ async def extract_scope_from_document(
     if document is None:
         raise ScopeNotFoundError("Document not found for this scope")
 
-    # TODO: Integrate with ingestion service
-    # This should:
-    # 1. Call ingestion service API to trigger extraction
-    # 2. Update document processing_status to "processing"
-    # 3. Return extraction job ID
-    # 4. Client can poll for status
-
-    import uuid as uuid_lib
-
-    extraction_id = uuid_lib.uuid4()
-
     # Update document status
     document.processing_status = "processing"
     await session.commit()
 
-    # Estimate processing time based on file size and type
-    estimated_time = 30  # Default 30 seconds
+    # Call ingestion service API
+    ingestion_url = getattr(settings, "ingestion_service_url", None) or "http://ingestion-service:8000"
+    
+    # Load template structure if template_id provided
+    template_structure = None
+    if template_id:
+        from app.services import templates as template_service
+        try:
+            template = await template_service.get_template(session, template_id, user_id)
+            if template.type == "scope":
+                template_structure = template.sections
+        except Exception as e:
+            logger.warning(f"Failed to load template {template_id}: {e}")
+    
+    # Get document content from extracted_text field
+    document_content = document.extracted_text or ""
+    
+    # If document has file_url but no extracted_text, try to read it
+    if not document_content and document.file_url:
+        # TODO: Read from actual storage (S3/local filesystem)
+        # For now, log warning
+        logger.warning(f"Document {upload_id} has file_url but no extracted_text stored. File reading not yet implemented.")
+    
+    try:
+        # Increased timeout to 660s (11 minutes) to accommodate ingestion service's 600s timeout
+        async with httpx.AsyncClient(timeout=660.0) as client:
+            # First, create a document in ingestion service with the content
+            # This allows ingestion service to process it
+            doc_create_response = await client.post(
+                f"{ingestion_url}/v1/documents",
+                json={
+                    "source_type": "client_brief",
+                    "content": document_content,
+                    "metadata": {
+                        "project": scope.project.name if scope.project else None,
+                        "client": scope.project.client.name if scope.project and scope.project.client else None,
+                    }
+                },
+            )
+            doc_create_response.raise_for_status()
+            ingestion_doc_id = doc_create_response.json()["doc_id"]
+            
+            # Wait a moment for document to be processed
+            import asyncio
+            await asyncio.sleep(1)
+            
+            # Now call extract-for-scope with the ingestion document ID
+            response = await client.post(
+                f"{ingestion_url}/v1/documents/extract-for-scope",
+                json={
+                    "scopeId": str(scope_id),
+                    "documentId": str(ingestion_doc_id),  # Use ingestion service doc ID
+                    "templateId": str(template_id) if template_id else None,
+                    "templateStructure": template_structure,  # Pass template structure directly
+                    "workspaceId": str(scope.workspace_id),
+                    "extractionType": extraction_type,
+                    "aiModel": ai_model,
+                    # developerLevel and developerExperienceYears removed - no longer used for hours estimation
+                },
+            )
+            response.raise_for_status()
+            result = response.json()
+            
+            # Log response for debugging
+            logger.info(f"Extraction response for scope {scope_id}: status={result.get('status')}, sections_count={len(result.get('scopeSections') or result.get('scope_sections') or [])}")
+            
+            # Map generated scope to ScopeSection records
+            # Check both camelCase and snake_case for compatibility
+            scope_sections = result.get("scopeSections") or result.get("scope_sections")
+            response_status = result.get("status", "").lower()
+            
+            if response_status == "completed" and scope_sections:
+                # Successfully generated scope
+                await _map_generated_scope_to_sections(
+                    session,
+                    scope_id,
+                    scope_sections,
+                    user_id,
+                )
+                
+                # Update scope metadata
+                scope.confidence_score = result.get("confidence_score", 0)
+                scope.risk_level = result.get("risk_level", "low")
+                scope.progress = min(50, scope.progress + 20)  # Increment progress
+                
+                # Update document status
+                document.processing_status = "completed"
+                await session.commit()
+                
+                return {
+                    "extraction_id": result.get("extraction_id", uuid.uuid4()),
+                    "status": "completed",
+                    "estimated_time": result.get("estimated_time", 30),
+                }
+            elif response_status == "processing":
+                # Still processing (e.g., timeout but will continue)
+                logger.info(f"Scope extraction for {scope_id} is still processing. Estimated time: {result.get('estimated_time', 600)}s")
+                document.processing_status = "processing"
+                await session.commit()
+                
+                return {
+                    "extraction_id": result.get("extraction_id", uuid.uuid4()),
+                    "status": "processing",
+                    "estimated_time": result.get("estimated_time", 600),
+                    "message": "Scope generation is taking longer than expected. The extraction is continuing in the background. Please check back later or refresh the page.",
+                }
+            else:
+                # Unknown status or no sections
+                logger.warning(f"Scope extraction for {scope_id} returned status '{response_status}' with {len(scope_sections or [])} sections")
+                document.processing_status = "processing"
+                await session.commit()
+                
+                return {
+                    "extraction_id": result.get("extraction_id", uuid.uuid4()),
+                    "status": "processing",
+                    "estimated_time": result.get("estimated_time", 600),
+                }
+    except httpx.TimeoutException as e:
+        logger.warning(f"Extraction timeout for scope {scope_id}: {e}. Extraction will continue in background.")
+        document.processing_status = "processing"
+        await session.commit()
+        # Return a response indicating background processing
+        return {
+            "extraction_id": uuid.uuid4(),
+            "status": "processing",
+            "estimated_time": 60,  # Longer estimate for background processing
+            "message": "Extraction is taking longer than expected. The scope has been created and extraction will continue in the background.",
+        }
+    except httpx.RequestError as e:
+        logger.error(f"Failed to call ingestion service: {e}")
+        document.processing_status = "failed"
+        await session.commit()
+        raise ScopeAccessError(f"Failed to process document: {str(e)}")
+
+    # Fallback: Return placeholder if service unavailable
+    import uuid as uuid_lib
+    extraction_id = uuid_lib.uuid4()
+    estimated_time = 30
     if document.file_size:
-        # Rough estimate: 1 second per MB, minimum 10 seconds
         estimated_time = max(10, min(120, document.file_size // (1024 * 1024)))
 
     return {
@@ -561,4 +789,34 @@ async def extract_scope_from_document(
         "status": "processing",
         "estimated_time": estimated_time,
     }
+
+
+async def _map_generated_scope_to_sections(
+    session: AsyncSession,
+    scope_id: uuid.UUID,
+    scope_sections_data: list[dict],
+    user_id: uuid.UUID,
+) -> None:
+    """
+    Map generated scope sections to ScopeSection records.
+    
+    Args:
+        scope_sections_data: List of section dictionaries from ingestion service
+    """
+    from app.models import ScopeSection
+    import json
+    
+    # Create sections one by one to avoid SQLAlchemy bulk insert issues
+    for idx, section_data in enumerate(scope_sections_data):
+        section = ScopeSection(
+            scope_id=scope_id,
+            title=section_data.get("title", "Untitled Section"),
+            content=json.dumps(section_data.get("content", {}), indent=2) if isinstance(section_data.get("content"), dict) else section_data.get("content", ""),
+            section_type=section_data.get("section_type"),
+            order_index=section_data.get("order_index", idx),
+            ai_generated=True,
+            confidence_score=section_data.get("confidence_score", 0),
+        )
+        session.add(section)
+        await session.flush()  # Flush after each to get the ID
 

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import json
 from functools import lru_cache
 from typing import List, Optional, Union
 
-from pydantic import AnyHttpUrl, BaseSettings, Field
+from pydantic import AnyHttpUrl, BaseSettings, Field, validator
 
 
 class Settings(BaseSettings):
@@ -37,11 +38,39 @@ class Settings(BaseSettings):
     password_reset_emails_per_hour: int = Field(5, env="PASSWORD_RESET_EMAILS_PER_HOUR")
     invite_emails_per_hour: int = Field(20, env="INVITE_EMAILS_PER_HOUR")
     admin_emails: Union[List[str], str] = Field(default_factory=list, env="ADMIN_EMAILS")
+    
+    # OpenAI API configuration for RAG and speech transcription
+    openai_api_key: Optional[str] = Field(None, env="OPENAI_API_KEY")
+    openai_model: str = Field("gpt-4o-mini", env="OPENAI_MODEL")
+    ingestion_service_url: Optional[str] = Field(None, env="INGESTION_SERVICE_URL")
+    
+    # File upload configuration
+    upload_dir: str = Field("uploads", env="UPLOAD_DIR")
 
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
+
+    @validator('cors_origins', pre=True)
+    def parse_cors_origins(cls, v):
+        """Parse CORS_ORIGINS from JSON string if needed."""
+        if isinstance(v, str):
+            # Try to parse as JSON array
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+                # If it's a single string, wrap in list
+                return [parsed] if parsed else []
+            except (json.JSONDecodeError, TypeError):
+                # If JSON parsing fails, treat as comma-separated string
+                if ',' in v:
+                    return [origin.strip() for origin in v.split(',')]
+                # Single origin as string
+                return [v] if v else []
+        # Already a list or None
+        return v if v else []
 
     @property
     def google_oauth_enabled(self) -> bool:

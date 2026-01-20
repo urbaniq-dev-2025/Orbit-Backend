@@ -135,3 +135,29 @@ async def get_active_projects(
         ) from exc
 
 
+@router.get("/calendar")
+async def get_calendar_events(
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
+) -> dict:
+    """Get calendar events for dashboard."""
+    # TODO: Implement calendar events when calendar model is available
+    return {
+        "events": [],
+        "total": 0,
+    }
+
+
+@router.get("/pipeline/metrics")
+async def get_pipeline_metrics(
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
+) -> dict:
+    """Get pipeline metrics for dashboard."""
+    # TODO: Implement pipeline metrics when needed
+    return {
+        "metrics": {},
+    }
+

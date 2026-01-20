@@ -60,6 +60,20 @@ class ScopeCreate(ScopeBase):
     workspace_id: uuid.UUID = Field(..., alias="workspaceId")
     project_id: Optional[uuid.UUID] = Field(None, alias="projectId")
     template_id: Optional[uuid.UUID] = Field(None, alias="templateId")
+    
+    # Input options for scope creation
+    input_type: Optional[Literal["pdf", "text", "speech", "ai_generate", "google_docs", "notion"]] = Field(
+        None, alias="inputType"
+    )
+    input_data: Optional[str] = Field(None, alias="inputData")  # Text content or file content
+    input_url: Optional[str] = Field(None, alias="inputUrl")  # For Google Docs/Notion URLs
+    
+    # AI Model selection (based on subscription)
+    ai_model: Optional[str] = Field(None, alias="aiModel")  # "gpt-4", "claude-3", "gpt-3.5", etc.
+    
+    # Hours estimation preferences
+    developer_level: Literal["junior", "mid", "senior"] = Field("mid", alias="developerLevel")
+    developer_experience_years: int = Field(3, alias="developerExperienceYears", ge=1, le=10)
 
     class Config:
         allow_population_by_field_name = True
@@ -94,6 +108,11 @@ class ScopeSummary(BaseModel):
     created_by: Optional[uuid.UUID] = Field(None, alias="createdBy")
     created_at: datetime = Field(..., alias="createdAt")
     updated_at: datetime = Field(..., alias="updatedAt")
+    # Additional fields for frontend
+    project_name: Optional[str] = Field(None, alias="projectName")
+    client_id: Optional[uuid.UUID] = Field(None, alias="clientId")
+    client_name: Optional[str] = Field(None, alias="clientName")
+    is_favourite: bool = Field(False, alias="isFavourite")
 
     class Config:
         allow_population_by_field_name = True
@@ -158,6 +177,10 @@ class ScopeUploadResponse(BaseModel):
 class ScopeExtractRequest(BaseModel):
     upload_id: uuid.UUID = Field(..., alias="uploadId")
     extraction_type: Literal["full", "summary", "sections"] = Field("full", alias="extractionType")
+    template_id: Optional[uuid.UUID] = Field(None, alias="templateId")  # Template to guide structure
+    ai_model: Optional[str] = Field(None, alias="aiModel")  # AI model to use
+    developer_level: Literal["junior", "mid", "senior"] = Field("mid", alias="developerLevel")
+    developer_experience_years: int = Field(3, alias="developerExperienceYears", ge=1, le=10)
 
     class Config:
         allow_population_by_field_name = True
@@ -170,5 +193,4 @@ class ScopeExtractResponse(BaseModel):
 
     class Config:
         allow_population_by_field_name = True
-
 

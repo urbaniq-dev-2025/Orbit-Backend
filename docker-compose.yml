@@ -38,6 +38,8 @@ services:
       - ACCESS_TOKEN_EXPIRES_MINUTES=${ACCESS_TOKEN_EXPIRES_MINUTES:-30}
       - REFRESH_TOKEN_EXPIRES_MINUTES=${REFRESH_TOKEN_EXPIRES_MINUTES:-10080}
       - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","http://127.0.0.1:3000"]}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
     env_file:
       - ./backend/.env
     ports:
@@ -75,7 +77,10 @@ services:
       - ENVIRONMENT=${INGESTION_ENVIRONMENT:-dev}
       - DEBUG=${DEBUG:-true}
       - CLARIFICATION_MIN_LENGTH=${CLARIFICATION_MIN_LENGTH:-500}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
     env_file:
+      - ./backend/.env
       - ./backend/ingestion/.env
     ports:
       - "${INGESTION_PORT:-8000}:8000"

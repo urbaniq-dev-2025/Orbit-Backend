@@ -28,8 +28,12 @@ def _map_project_exception(exc: Exception) -> HTTPException:
         return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     if isinstance(exc, project_service.ProjectAccessError):
         return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc))
+    # Log the actual exception for debugging
+    import traceback
+    print(f"Project exception: {exc}")
+    print(traceback.format_exc())
     return HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to process project request."
+        status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unable to process project request: {str(exc)}"
     )
 
 
@@ -39,12 +43,15 @@ async def list_projects(
     current_user=Depends(deps.get_current_user),
     workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
     status: Optional[str] = Query(None),
+    page_size: Optional[int] = Query(None, alias="pageSize"),
 ) -> List[ProjectSummary]:
     """List projects with filters."""
     try:
-        project_status = (
-            status if status in ["active", "archived", "completed", "on_hold"] else None
-        )
+        # ProjectStatus is a Literal type, so we can pass the string directly if valid
+        project_status: Optional[ProjectStatus] = None
+        if status and status in ["active", "archived", "completed", "on_hold"]:
+            project_status = status  # type: ignore
+        
         project_list = await project_service.list_projects(
             session,
             current_user.id,
@@ -55,14 +62,15 @@ async def list_projects(
         return [
             ProjectSummary(
                 id=p.id,
-                workspace_id=p.workspace_id,
+                workspaceId=p.workspace_id,
                 name=p.name,
                 description=p.description,
-                client_name=p.client_name,
+                clientId=p.client_id,
+                clientName=p.client_name,
                 status=p.status,
-                created_by=p.created_by,
-                created_at=p.created_at,
-                updated_at=p.updated_at,
+                createdBy=p.created_by,
+                createdAt=p.created_at,
+                updatedAt=p.updated_at,
             )
             for p in project_list
         ]

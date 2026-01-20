@@ -127,4 +127,3 @@ class WorkspaceInviteResponse(BaseModel):
 
 class WorkspaceMemberUpdateRequest(BaseModel):
     role: WorkspaceRole
-

@@ -557,4 +557,3 @@ async def duplicate_proposal(
     # Reload with slides
     return await get_proposal(session, new_proposal.id, user_id, include_slides=True)
 
-

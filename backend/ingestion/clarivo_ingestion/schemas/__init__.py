@@ -5,7 +5,6 @@ from clarivo_ingestion.schemas.documents import (
     ClarificationResponseRequest,
     DocumentCreateResponse,
     DocumentStatusResponse,
-    ModuleListItem,
     ModuleListResponse,
     TextDocumentCreateRequest,
 )
@@ -16,7 +15,6 @@ __all__ = [
     "ClarificationResponseRequest",
     "DocumentCreateResponse",
     "DocumentStatusResponse",
-    "ModuleListItem",
     "ModuleListResponse",
     "TextDocumentCreateRequest",
     "ScopeDocument",

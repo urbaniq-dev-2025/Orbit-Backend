@@ -10,6 +10,9 @@ class UserBase(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
+    phone: Optional[str] = None
+    company: Optional[str] = None
+    job_role: Optional[str] = None  # User's job title/role
     role: str = "user"  # 'admin' or 'user'
 
 
@@ -20,6 +23,9 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
+    phone: Optional[str] = None
+    company: Optional[str] = None
+    job_role: Optional[str] = None
 
 
 class UserPublic(UserBase):
@@ -27,7 +33,11 @@ class UserPublic(UserBase):
     role: str
     is_active: bool
     is_verified: bool
+    email_verified: bool = False
     avatar_url: Optional[str] = None
+    phone: Optional[str] = None
+    company: Optional[str] = None
+    job_role: Optional[str] = None
 
     class Config:
         orm_mode = True

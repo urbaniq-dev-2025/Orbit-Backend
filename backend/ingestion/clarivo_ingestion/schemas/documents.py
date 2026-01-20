@@ -1,70 +1,31 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from enum import Enum
-from typing import Literal
-from uuid import UUID, uuid4
+from datetime import datetime, timezone
+from typing import Any, Literal
+from uuid import UUID
 
-from pydantic import BaseModel, Field, HttpUrl, field_validator
+from pydantic import BaseModel, Field
 
-from clarivo_ingestion.schemas.scope import ScopeDocument, OutputFormatScopeDocument
-
-DocumentSourceType = Literal["uploaded_file", "pasted_text", "url", "email", "client_brief", "meeting_notes", "rfp", "proposal"]
-
-
-class DocumentStatus(str, Enum):
-    SUBMITTED = "submitted"
-    PROCESSING = "processing"
-    AWAITING_CLARIFICATION = "awaiting_clarification"
-    READY_FOR_PREPROCESSING = "ready_for_preprocessing"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
-
-
-class DocumentStage(str, Enum):
-    INGESTION = "ingestion"
-    CLARIFICATION = "clarification"
-    PREPROCESSING = "preprocessing"
-
-
-class ClarificationStatus(str, Enum):
-    OPEN = "open"
-    ANSWERED = "answered"
-    EXPIRED = "expired"
-
-
-class ClarificationCategory(str, Enum):
-    PERSONA_COVERAGE = "persona_coverage"
-    FEATURE_GAPS = "feature_gaps"
-    KPI_DETAILS = "kpi_details"
-    CONTEXT = "context"
-    OTHER = "other"
+DocumentSourceType = Literal["uploaded_file", "pasted_text", "url", "email", "client_brief"]
+DocumentStatus = Literal["submitted", "processing", "completed", "failed", "cancelled"]
+DocumentStage = Literal["ingestion", "clarification", "generation", "review"]
 
 
 class DocumentMetadata(BaseModel):
-    client_name: str | None = None
-    project_name: str | None = None
+    project: str | None = None
+    client: str | None = None
     notes: str | None = None
-    engagement_id: str | None = None
+    page_count: int | None = None
+    language: str | None = None
 
 
-class TextDocumentCreateRequest(BaseModel):
-    source_type: DocumentSourceType
-    content: str = Field(min_length=1, max_length=200_000)
-    metadata: DocumentMetadata | None = None
-
-    @field_validator("source_type")
-    @classmethod
-    def validate_source_type(cls, value: DocumentSourceType) -> DocumentSourceType:
-        if value == "uploaded_file":
-            raise ValueError("Use multipart upload for files")
-        return value
-
-
-class URLDocumentCreateRequest(BaseModel):
-    source_type: Literal["url"] = "url"
-    url: HttpUrl
-    metadata: DocumentMetadata | None = None
+class ClarificationItem(BaseModel):
+    clarification_id: UUID
+    question: str
+    context: str | None = None
+    status: Literal["pending", "answered"] = "pending"
+    answer: str | None = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class DocumentCreateResponse(BaseModel):
@@ -73,47 +34,10 @@ class DocumentCreateResponse(BaseModel):
     message: str
 
 
-class ClarificationItem(BaseModel):
-    clarification_id: UUID = Field(default_factory=uuid4)
-    question: str
-    category: ClarificationCategory
-    status: ClarificationStatus = ClarificationStatus.OPEN
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    expires_at: datetime | None = None
-    answer: str | None = None
-    answered_at: datetime | None = None
-
-    @staticmethod
-    def create_with_timeout(
-        question: str,
-        category: ClarificationCategory,
-        timeout_hours: int,
-    ) -> ClarificationItem:
-        expires_at = datetime.now(timezone.utc) + timedelta(hours=timeout_hours)
-        return ClarificationItem(
-            question=question,
-            category=category,
-            expires_at=expires_at,
-        )
-
-
-class ClarificationListResponse(BaseModel):
-    doc_id: UUID
-    items: list[ClarificationItem]
-
-
-class ClarificationResponseRequest(BaseModel):
-    answer: str = Field(min_length=3, max_length=10_000)
-
-
-class ModuleListItem(BaseModel):
-    name: str
-    features: list[str] = Field(default_factory=list)
-
-
-class ModuleListResponse(BaseModel):
-    doc_id: UUID
-    modules: list[ModuleListItem]
+class TextDocumentCreateRequest(BaseModel):
+    source_type: DocumentSourceType
+    content: str = Field(min_length=10, max_length=200_000)
+    metadata: DocumentMetadata | None = None
 
 
 class DocumentStatusResponse(BaseModel):
@@ -121,17 +45,17 @@ class DocumentStatusResponse(BaseModel):
     status: DocumentStatus
     stage: DocumentStage
     progress: int = Field(ge=0, le=100)
-    clarification_required: bool = False
-    scope_available: bool = False
-    last_updated: datetime
+    metadata: DocumentMetadata | None = None
+    created_at: datetime
+    updated_at: datetime
     links: dict[str, str] = Field(default_factory=dict)
 
 
 class DocumentRecord(BaseModel):
     doc_id: UUID
     source_type: DocumentSourceType
-    status: DocumentStatus = DocumentStatus.SUBMITTED
-    stage: DocumentStage = DocumentStage.INGESTION
+    status: DocumentStatus = "submitted"
+    stage: DocumentStage = "ingestion"
     progress: int = 0
     metadata: DocumentMetadata | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -140,11 +64,63 @@ class DocumentRecord(BaseModel):
     original_filename: str | None = None
     content_length: int = 0
     content: str = ""
-    scope: OutputFormatScopeDocument | ScopeDocument | None = None  # Support both formats for backward compatibility
+    scope: Any | None = None  # OutputFormatScopeDocument | ScopeDocument | None
     scope_version: int = 0
     scope_generated_at: datetime | None = None
-    scope_history: list[OutputFormatScopeDocument | ScopeDocument] = Field(default_factory=list)
+    scope_history: list[Any] = Field(default_factory=list)
 
     def touch(self) -> None:
         self.updated_at = datetime.now(timezone.utc)
 
+
+class ClarificationListResponse(BaseModel):
+    doc_id: UUID
+    clarifications: list[ClarificationItem]
+
+
+class ClarificationResponseRequest(BaseModel):
+    answer: str = Field(min_length=1, max_length=5000)
+
+
+class ModuleListResponse(BaseModel):
+    doc_id: UUID
+    modules: list[dict[str, Any]]
+
+
+# New schema for scope extraction with hours
+class ScopeExtractForScopeRequest(BaseModel):
+    """Request for extracting scope with context."""
+    scope_id: UUID = Field(..., alias="scopeId")
+    document_id: UUID = Field(..., alias="documentId")
+    template_id: UUID | None = Field(None, alias="templateId")
+    template_structure: dict | None = Field(None, alias="templateStructure")  # Template sections structure
+    workspace_id: UUID = Field(..., alias="workspaceId")
+    extraction_type: Literal["full", "summary", "sections"] = "full"
+    ai_model: str | None = Field(None, alias="aiModel")
+    developer_level: Literal["junior", "mid", "senior"] = "mid"
+    developer_experience_years: int = 3
+
+    model_config = {"populate_by_name": True}
+
+
+class ScopeSectionData(BaseModel):
+    """Scope section data."""
+    title: str
+    content: str | dict
+    section_type: str | None = None
+    order_index: int = 0
+    confidence_score: int = 0
+    hours_breakdown: dict | None = None  # Kept for backward compatibility, but not used
+
+
+class ScopeExtractForScopeResponse(BaseModel):
+    """Response from scope extraction."""
+    extraction_id: UUID = Field(..., alias="extractionId")
+    status: str
+    scope_sections: list[ScopeSectionData] = Field(default_factory=list, alias="scopeSections")
+    confidence_score: int = Field(0, alias="confidenceScore")
+    risk_level: str = Field("low", alias="riskLevel")
+    total_hours: float = Field(0, alias="totalHours")
+    estimated_time: int = Field(30, alias="estimatedTime")
+
+    model_config = {"populate_by_name": True}

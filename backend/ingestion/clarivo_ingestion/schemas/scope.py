@@ -76,6 +76,72 @@ class ModuleFeature(BaseModel):
     model_config = {"populate_by_name": True}  # Allow both subfeatures and subFeatures in JSON input
 
 
+# Enhanced schemas with hours estimation
+class HoursBreakdown(BaseModel):
+    """Hours breakdown for a feature/sub-feature."""
+    development: float = Field(..., ge=0, description="Development hours")
+    testing: float = Field(..., ge=0, description="Testing hours")
+    code_review: float = Field(..., ge=0, description="Code review hours")
+    documentation: float = Field(..., ge=0, description="Documentation hours")
+    total: float = Field(..., ge=0, description="Total hours")
+    confidence: float = Field(..., ge=0, le=1, description="Confidence score (0-1)")
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class SubFeature(BaseModel):
+    """Sub-feature with hours estimation."""
+    name: str
+    description: str
+    complexity: Literal["Low", "Medium", "High"] = "Medium"
+    estimated_hours: float = Field(..., ge=0, alias="estimatedHours")
+    hours_breakdown: HoursBreakdown = Field(..., alias="hoursBreakdown")
+    assumptions: list[str] = Field(default_factory=list)
+    dependencies: list[str] = Field(default_factory=list)
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class EnhancedFeature(BaseModel):
+    """Feature with sub-features and hours."""
+    name: str
+    description: str
+    sub_features: list[SubFeature] = Field(default_factory=list, alias="subFeatures")
+    total_hours: float = Field(..., ge=0, alias="totalHours")
+    priority: Priority = "P2"
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class EnhancedModule(BaseModel):
+    """Module with features and hours estimation."""
+    name: str
+    description: str
+    features: list[EnhancedFeature] = Field(default_factory=list)
+    total_hours: float = Field(..., ge=0, alias="totalHours")
+    order_index: int = Field(0, alias="orderIndex")
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class EnhancedScopeDocument(BaseModel):
+    """Enhanced scope document with hours estimation."""
+    modules: list[EnhancedModule] = Field(default_factory=list)
+    project_summary: dict = Field(default_factory=dict, alias="projectSummary")
+    technical_requirements: list[str] = Field(default_factory=list, alias="technicalRequirements")
+    non_functional_requirements: list[str] = Field(default_factory=list, alias="nonFunctionalRequirements")
+    total_project_hours: float = Field(..., ge=0, alias="totalProjectHours")
+    estimated_timeline_weeks: Optional[float] = Field(None, alias="estimatedTimelineWeeks")
+    team_size_recommendation: Optional[int] = Field(None, alias="teamSizeRecommendation")
+
+    class Config:
+        allow_population_by_field_name = True
+
+
 class OutputFormatModule(BaseModel):
     """Module in Output folder format with nested features."""
     name: str
