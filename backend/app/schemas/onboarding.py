@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, EmailStr, Field, conlist, constr
+from pydantic import BaseModel, EmailStr, Field
 
 OnboardingStep = Literal["workspace", "team", "goals", "plan", "complete"]
 PlanSelection = Literal["starter", "growth", "enterprise"]
 
 
 class WorkspaceStepPayload(BaseModel):
-    name: constr(min_length=1, max_length=255)
+    name: str = Field(..., min_length=1, max_length=255)
     primary_color: Optional[str] = Field(None, alias="primaryColor", max_length=7)
     secondary_color: Optional[str] = Field(None, alias="secondaryColor", max_length=7)
     logo_url: Optional[str] = Field(None, alias="logoUrl", max_length=500)
@@ -23,7 +23,7 @@ class WorkspaceStepPayload(BaseModel):
 
 class TeamStepPayload(BaseModel):
     team_size: Optional[str] = Field(None, alias="teamSize", max_length=50)
-    invites: conlist(EmailStr, max_items=20) = Field(default_factory=list)
+    invites: list[EmailStr] = Field(default_factory=list, max_length=20)
     invite_message: Optional[str] = Field(None, alias="inviteMessage", max_length=1000)
 
     class Config:
@@ -31,8 +31,10 @@ class TeamStepPayload(BaseModel):
 
 
 class GoalsStepPayload(BaseModel):
-    goals: conlist(constr(min_length=1, max_length=100), min_items=1) = Field(
-        default_factory=list
+    goals: list[str] = Field(
+        default_factory=list,
+        min_length=1,
+        max_length=100
     )
     custom_goal: Optional[str] = Field(None, alias="customGoal", max_length=500)
 

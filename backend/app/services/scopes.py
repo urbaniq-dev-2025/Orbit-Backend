@@ -79,7 +79,6 @@ async def list_scopes(
     # Filter by client_id (via project relationship)
     if client_id:
         # Verify client belongs to accessible workspace
-        from app.models import Client
         client_stmt = select(Client.id).where(
             Client.id == client_id,
             Client.workspace_id.in_(accessible_workspace_ids),
@@ -723,6 +722,13 @@ async def extract_scope_from_document(
                     user_id,
                 )
                 
+                # Save full scope document JSON if provided
+                scope_document_json = result.get("scopeDocument") or result.get("scope_document")
+                if scope_document_json:
+                    import json
+                    scope.scope_document_json = json.dumps(scope_document_json, indent=2)
+                    logger.info(f"Saved scope document JSON for scope {scope_id}")
+                
                 # Update scope metadata
                 scope.confidence_score = result.get("confidence_score", 0)
                 scope.risk_level = result.get("risk_level", "low")
@@ -771,11 +777,36 @@ async def extract_scope_from_document(
             "estimated_time": 60,  # Longer estimate for background processing
             "message": "Extraction is taking longer than expected. The scope has been created and extraction will continue in the background.",
         }
+    except httpx.HTTPStatusError as e:
+        # Handle HTTP errors (500, 502, 503, etc.)
+        if e.response.status_code >= 500:
+            # Server error - may be temporary (OpenAI API issues, etc.)
+            logger.warning(f"Ingestion service returned {e.response.status_code} for scope {scope_id}: {e}. This may be due to OpenAI API issues. Extraction may continue in background.")
+            document.processing_status = "processing"  # Keep as processing, may recover
+            await session.commit()
+            return {
+                "extraction_id": uuid.uuid4(),
+                "status": "processing",
+                "estimated_time": 600,
+                "message": "Extraction is taking longer than expected. The scope has been created and extraction will continue in the background. You can refresh the page later to see updated content.",
+            }
+        else:
+            # Client error (4xx) - likely permanent
+            logger.error(f"Failed to call ingestion service: {e}")
+            document.processing_status = "failed"
+            await session.commit()
+            raise ScopeAccessError(f"Failed to process document: {str(e)}")
     except httpx.RequestError as e:
-        logger.error(f"Failed to call ingestion service: {e}")
-        document.processing_status = "failed"
+        # Handle connection errors, timeouts, etc.
+        logger.warning(f"Failed to call ingestion service: {e}. Extraction may continue in background.")
+        document.processing_status = "processing"  # Keep as processing, may recover
         await session.commit()
-        raise ScopeAccessError(f"Failed to process document: {str(e)}")
+        return {
+            "extraction_id": uuid.uuid4(),
+            "status": "processing",
+            "estimated_time": 600,
+            "message": "Extraction is taking longer than expected. The scope has been created and extraction will continue in the background. You can refresh the page later to see updated content.",
+        }
 
     # Fallback: Return placeholder if service unavailable
     import uuid as uuid_lib

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -77,3 +77,13 @@ class ProjectProgressUpdate(BaseModel):
 
 class ProjectTeamAssignRequest(BaseModel):
     team: List[uuid.UUID] = Field(..., description="List of user IDs to assign to the project")
+
+
+class ProjectListResponse(BaseModel):
+    """Response for listing projects with statistics."""
+    projects: List[ProjectSummary] = Field(default_factory=list)
+    stats: Dict[str, Any] = Field(default_factory=dict, description="Project statistics by status")
+
+    class Config:
+        populate_by_name = True
+        from_attributes = True

@@ -92,7 +92,7 @@ async def refresh_token(refresh_token: str, session: deps.SessionDep) -> Token:
 
 @router.get("/me", response_model=UserPublic)
 async def me(current_user: User = Depends(deps.get_current_user)) -> UserPublic:
-    return UserPublic.from_orm(current_user)
+    return UserPublic.model_validate(current_user)
 
 
 @router.put("/me", response_model=UserPublic)

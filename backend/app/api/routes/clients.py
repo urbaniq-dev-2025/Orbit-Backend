@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
 from app.api import deps
+from app.core.logging import get_logger
 from app.schemas.client import (
     ClientCreate,
     ClientDetail,
@@ -22,6 +23,7 @@ from app.schemas.client import (
 )
 from app.services import client as client_service
 
+logger = get_logger(__name__)
 router = APIRouter()
 
 
@@ -30,7 +32,7 @@ async def list_clients(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
     workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
-    status: Optional[str] = Query(None, description="Filter by status: prospect, active, past"),
+    client_status: Optional[str] = Query(None, alias="status", description="Filter by status: prospect, active, past"),
     search: Optional[str] = Query(None, description="Search in name, industry, contact name, or email"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100, alias="pageSize"),
@@ -41,7 +43,7 @@ async def list_clients(
             session,
             current_user.id,
             workspace_id=workspace_id,
-            status=status,
+            status=client_status,
             search=search,
             page=page,
             page_size=page_size,
@@ -57,44 +59,47 @@ async def list_clients(
             project_count = await client_service._get_client_project_count(session, c)
             scope_count = await client_service._get_client_scope_count(session, c)
             
+            # Use model_validate with from_attributes for Pydantic v2 compatibility
             client_summaries.append(
-                ClientSummary(
-                    id=c.id,
-                    workspace_id=c.workspace_id,
-                    name=c.name,
-                    logo_url=c.logo_url,
-                    status=c.status,
-                    industry=c.industry,
-                    contact_name=c.contact_name,
-                    contact_email=c.contact_email,
-                    contact_phone=c.contact_phone,
-                    health_score=c.health_score,
-                    source=c.source,
-                    notes=c.notes,
-                    location=location,
-                    city=c.city,
-                    state=c.state,
-                    country=c.country,
-                    company_size=c.company_size,
-                    project_count=project_count,
-                    scope_count=scope_count,
-                    created_at=c.created_at,
-                    updated_at=c.updated_at,
-                    last_activity=c.last_activity,
-                )
+                ClientSummary.model_validate({
+                    "id": c.id,
+                    "workspaceId": c.workspace_id,
+                    "name": c.name,
+                    "logoUrl": c.logo_url,
+                    "status": c.status,
+                    "industry": c.industry,
+                    "contactName": c.contact_name or "",
+                    "contactEmail": c.contact_email or "",
+                    "contactPhone": c.contact_phone,
+                    "healthScore": c.health_score or 0,
+                    "source": c.source,
+                    "notes": c.notes,
+                    "location": location,
+                    "city": c.city,
+                    "state": c.state,
+                    "country": c.country,
+                    "companySize": c.company_size,
+                    "projectCount": project_count,
+                    "scopeCount": scope_count,
+                    "createdAt": c.created_at,
+                    "updatedAt": c.updated_at,
+                    "lastActivity": c.last_activity,
+                })
             )
 
-        return ClientListResponse(
-            clients=client_summaries,
-            total=total,
-            page=page,
-            page_size=page_size,
-            has_more=(page * page_size) < total,
-        )
+        return ClientListResponse.model_validate({
+            "clients": client_summaries,
+            "total": total,
+            "page": page,
+            "pageSize": page_size,
+            "hasMore": (page * page_size) < total,
+        })
     except Exception as exc:
+        import traceback
+        logger.error(f"Error listing clients: {exc}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unable to retrieve clients.",
+            detail=f"Unable to retrieve clients: {str(exc)}",
         ) from exc
 
 
@@ -184,30 +189,30 @@ async def create_client(
         # Compute location
         location = client_service._compute_location(client.city, client.state, client.country)
         
-        return ClientSummary(
-            id=client.id,
-            workspace_id=client.workspace_id,
-            name=client.name,
-            logo_url=client.logo_url,
-            status=client.status,
-            industry=client.industry,
-            contact_name=client.contact_name,
-            contact_email=client.contact_email,
-            contact_phone=client.contact_phone,
-            health_score=client.health_score,
-            source=client.source,
-            notes=client.notes,
-            location=location,
-            city=client.city,
-            state=client.state,
-            country=client.country,
-            company_size=client.company_size,
-            project_count=0,
-            scope_count=0,
-            created_at=client.created_at,
-            updated_at=client.updated_at,
-            last_activity=client.last_activity,
-        )
+        return ClientSummary.model_validate({
+            "id": client.id,
+            "workspaceId": client.workspace_id,
+            "name": client.name,
+            "logoUrl": client.logo_url,
+            "status": client.status,
+            "industry": client.industry,
+            "contactName": client.contact_name or "",
+            "contactEmail": client.contact_email or "",
+            "contactPhone": client.contact_phone,
+            "healthScore": client.health_score or 0,
+            "source": client.source,
+            "notes": client.notes,
+            "location": location,
+            "city": client.city,
+            "state": client.state,
+            "country": client.country,
+            "companySize": client.company_size,
+            "projectCount": 0,
+            "scopeCount": 0,
+            "createdAt": client.created_at,
+            "updatedAt": client.updated_at,
+            "lastActivity": client.last_activity,
+        })
     except client_service.ClientAccessError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -243,30 +248,30 @@ async def update_client(
         project_count = await client_service._get_client_project_count(session, client)
         scope_count = await client_service._get_client_scope_count(session, client)
         
-        return ClientSummary(
-            id=client.id,
-            workspace_id=client.workspace_id,
-            name=client.name,
-            logo_url=client.logo_url,
-            status=client.status,
-            industry=client.industry,
-            contact_name=client.contact_name,
-            contact_email=client.contact_email,
-            contact_phone=client.contact_phone,
-            health_score=client.health_score,
-            source=client.source,
-            notes=client.notes,
-            location=location,
-            city=client.city,
-            state=client.state,
-            country=client.country,
-            company_size=client.company_size,
-            project_count=project_count,
-            scope_count=scope_count,
-            created_at=client.created_at,
-            updated_at=client.updated_at,
-            last_activity=client.last_activity,
-        )
+        return ClientSummary.model_validate({
+            "id": client.id,
+            "workspaceId": client.workspace_id,
+            "name": client.name,
+            "logoUrl": client.logo_url,
+            "status": client.status,
+            "industry": client.industry,
+            "contactName": client.contact_name or "",
+            "contactEmail": client.contact_email or "",
+            "contactPhone": client.contact_phone,
+            "healthScore": client.health_score or 0,
+            "source": client.source,
+            "notes": client.notes,
+            "location": location,
+            "city": client.city,
+            "state": client.state,
+            "country": client.country,
+            "companySize": client.company_size,
+            "projectCount": project_count,
+            "scopeCount": scope_count,
+            "createdAt": client.created_at,
+            "updatedAt": client.updated_at,
+            "lastActivity": client.last_activity,
+        })
     except client_service.ClientNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

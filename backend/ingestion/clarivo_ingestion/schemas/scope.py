@@ -33,6 +33,14 @@ class Module(BaseModel):
     features: list[str] = Field(default_factory=list)
 
 
+class SuggestedModule(BaseModel):
+    """Suggested module that would be beneficial for the product type."""
+    name: str
+    description: str = ""
+    reason: str = ""  # Why this module is suggested
+    features: list[str] = Field(default_factory=list)
+
+
 class FunctionalRequirement(BaseModel):
     statement: str
 
@@ -58,6 +66,7 @@ class ScopeDocument(BaseModel):
     executive_summary: ExecutiveSummary = Field(default_factory=ExecutiveSummary)
     personas: list[Persona] = Field(default_factory=list)
     modules: list[Module] = Field(default_factory=list)
+    suggested_modules: list[SuggestedModule] = Field(default_factory=list)
     features: list[Feature] = Field(default_factory=list)
     functional_requirements: list[FunctionalRequirement] = Field(default_factory=list)
     technical_requirements: list[TechnicalRequirement] = Field(default_factory=list)

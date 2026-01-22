@@ -16,7 +16,7 @@ class ScopeSectionBase(BaseModel):
     order_index: Optional[int] = Field(None, alias="orderIndex", ge=0)
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True  # Pydantic v2: renamed from allow_population_by_field_name
 
 
 class ScopeSectionCreate(ScopeSectionBase):
@@ -29,7 +29,7 @@ class ScopeSectionUpdate(BaseModel):
     order_index: Optional[int] = Field(None, alias="orderIndex", ge=0)
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True  # Pydantic v2: renamed from allow_population_by_field_name
 
 
 class ScopeSectionPublic(ScopeSectionBase):
@@ -41,8 +41,8 @@ class ScopeSectionPublic(ScopeSectionBase):
     updated_at: datetime = Field(..., alias="updatedAt")
 
     class Config:
-        allow_population_by_field_name = True
-        orm_mode = True
+        populate_by_name = True  # Pydantic v2: renamed from allow_population_by_field_name
+        from_attributes = True
 
 
 class ScopeBase(BaseModel):
@@ -53,7 +53,7 @@ class ScopeBase(BaseModel):
     due_date: Optional[datetime] = Field(None, alias="dueDate")
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True  # Pydantic v2: renamed from allow_population_by_field_name
 
 
 class ScopeCreate(ScopeBase):
@@ -76,7 +76,7 @@ class ScopeCreate(ScopeBase):
     developer_experience_years: int = Field(3, alias="developerExperienceYears", ge=1, le=10)
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True  # Pydantic v2: renamed from allow_population_by_field_name
 
 
 class ScopeUpdate(BaseModel):
@@ -87,7 +87,7 @@ class ScopeUpdate(BaseModel):
     due_date: Optional[datetime] = Field(None, alias="dueDate")
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True  # Pydantic v2: renamed from allow_population_by_field_name
 
 
 class ScopeStatusUpdate(BaseModel):
@@ -115,8 +115,8 @@ class ScopeSummary(BaseModel):
     is_favourite: bool = Field(False, alias="isFavourite")
 
     class Config:
-        allow_population_by_field_name = True
-        orm_mode = True
+        populate_by_name = True  # Pydantic v2: renamed from allow_population_by_field_name
+        from_attributes = True  # Pydantic v2: renamed from orm_mode
 
 
 class ScopeDetail(ScopeSummary):
@@ -126,8 +126,8 @@ class ScopeDetail(ScopeSummary):
     is_favourite: bool = Field(False, alias="isFavourite")
 
     class Config:
-        allow_population_by_field_name = True
-        orm_mode = True
+        populate_by_name = True  # Pydantic v2: renamed from allow_population_by_field_name
+        from_attributes = True  # Pydantic v2: renamed from orm_mode
 
 
 class ScopeListResponse(BaseModel):
@@ -138,14 +138,14 @@ class ScopeListResponse(BaseModel):
     has_more: bool = Field(..., alias="hasMore")
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True  # Pydantic v2: renamed from allow_population_by_field_name
 
 
 class ScopeReorderRequest(BaseModel):
     section_ids: List[uuid.UUID] = Field(..., alias="sectionIds", min_items=1)
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True  # Pydantic v2: renamed from allow_population_by_field_name
 
 
 class ScopeExportRequest(BaseModel):
@@ -154,7 +154,7 @@ class ScopeExportRequest(BaseModel):
     template: Literal["standard", "detailed"] = Field("standard", description="Export template")
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True  # Pydantic v2: renamed from allow_population_by_field_name
 
 
 class ScopeExportResponse(BaseModel):
@@ -162,7 +162,7 @@ class ScopeExportResponse(BaseModel):
     expires_at: datetime = Field(..., alias="expiresAt")
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True  # Pydantic v2: renamed from allow_population_by_field_name
 
 
 class ScopeUploadResponse(BaseModel):
@@ -171,7 +171,7 @@ class ScopeUploadResponse(BaseModel):
     message: str
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True  # Pydantic v2: renamed from allow_population_by_field_name
 
 
 class ScopeExtractRequest(BaseModel):
@@ -183,7 +183,7 @@ class ScopeExtractRequest(BaseModel):
     developer_experience_years: int = Field(3, alias="developerExperienceYears", ge=1, le=10)
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True  # Pydantic v2: renamed from allow_population_by_field_name
 
 
 class ScopeExtractResponse(BaseModel):
@@ -192,5 +192,44 @@ class ScopeExtractResponse(BaseModel):
     estimated_time: int = Field(..., alias="estimatedTime", description="Estimated time in seconds")
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True  # Pydantic v2: renamed from allow_population_by_field_name
+
+
+# Features Tab Schemas
+class SubFeature(BaseModel):
+    """Sub-feature within a feature."""
+    name: str
+    description: Optional[str] = None
+
+    class Config:
+        populate_by_name = True
+
+
+class FeatureItem(BaseModel):
+    """Feature item for Features tab."""
+    name: str
+    description: Optional[str] = None
+    subFeatures: List[SubFeature] = Field(default_factory=list, alias="subFeatures")
+
+    class Config:
+        populate_by_name = True
+
+
+class ModuleItem(BaseModel):
+    """Module item for Features tab."""
+    name: str
+    description: Optional[str] = None
+    summary: Optional[str] = None
+    features: List[FeatureItem] = Field(default_factory=list)
+
+    class Config:
+        populate_by_name = True
+
+
+class ScopeFeaturesResponse(BaseModel):
+    """Response for Features tab - modules and features without status/hours."""
+    modules: List[ModuleItem] = Field(default_factory=list)
+
+    class Config:
+        populate_by_name = True
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import AnyHttpUrl, BaseModel, EmailStr, Field, root_validator, constr
+from pydantic import AnyHttpUrl, BaseModel, EmailStr, Field, root_validator
 
 
 class Token(BaseModel):
@@ -75,7 +75,7 @@ class PasswordResetRequest(BaseModel):
 
 class PasswordResetVerifyRequest(BaseModel):
     email: EmailStr
-    code: constr(regex=r"^\d{6}$")  # type: ignore[valid-type]
+    code: str = Field(..., pattern=r"^\d{6}$")
 
 
 class PasswordResetVerifyResponse(BaseModel):

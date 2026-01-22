@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import json
 import uuid
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
-from typing import Optional
 from sqlalchemy import func, select
 
 from app.api import deps
@@ -16,6 +17,7 @@ from app.schemas.scope import (
     ScopeExportResponse,
     ScopeExtractRequest,
     ScopeExtractResponse,
+    ScopeFeaturesResponse,
     ScopeListResponse,
     ScopeReorderRequest,
     ScopeSectionCreate,
@@ -25,6 +27,9 @@ from app.schemas.scope import (
     ScopeSummary,
     ScopeUpdate,
     ScopeUploadResponse,
+    ModuleItem,
+    FeatureItem,
+    SubFeature,
 )
 from app.services import scopes as scope_service
 
@@ -58,14 +63,15 @@ async def list_scopes(
 ) -> ScopeListResponse:
     """List scopes with filters and pagination."""
     try:
-        scope_status = status if status in ["draft", "in_review", "approved", "rejected"] else None
+        # Rename parameter to avoid shadowing fastapi.status module
+        scope_status_param = status if status in ["draft", "in_review", "approved", "rejected"] else None
         scope_list, total = await scope_service.list_scopes(
             session,
             current_user.id,
             workspace_id=workspace_id,
             project_id=project_id,
             client_id=client_id,
-            status=scope_status,
+            status=scope_status_param,
             search=search,
             is_favourite=is_favourite,
             page=page,
@@ -105,36 +111,44 @@ async def list_scopes(
                         client_id = client.id
                         client_name = client.name
 
+            # Use model_validate with camelCase field names for Pydantic v2 compatibility
             summaries.append(
-                ScopeSummary(
-                    id=scope.id,
-                    workspace_id=scope.workspace_id,
-                    project_id=scope.project_id,
-                    title=scope.title,
-                    description=scope.description,
-                    status=scope.status,
-                    progress=scope.progress,
-                    confidence_score=scope.confidence_score,
-                    risk_level=scope.risk_level,
-                    due_date=scope.due_date,
-                    created_by=scope.created_by,
-                    created_at=scope.created_at,
-                    updated_at=scope.updated_at,
-                    project_name=project_name,
-                    client_id=client_id,
-                    client_name=client_name,
-                    is_favourite=scope.id in favourites,
-                )
+                ScopeSummary.model_validate({
+                    "id": scope.id,
+                    "workspaceId": scope.workspace_id,
+                    "projectId": scope.project_id,
+                    "title": scope.title,
+                    "description": scope.description,
+                    "status": scope.status,
+                    "progress": scope.progress,
+                    "confidenceScore": scope.confidence_score if scope.confidence_score is not None else 0,
+                    "riskLevel": scope.risk_level if scope.risk_level is not None else "low",
+                    "dueDate": scope.due_date,
+                    "createdBy": scope.created_by,
+                    "createdAt": scope.created_at,
+                    "updatedAt": scope.updated_at,
+                    "projectName": project_name,
+                    "clientId": client_id,
+                    "clientName": client_name,
+                    "isFavourite": scope.id in favourites,
+                })
             )
 
-        return ScopeListResponse(
-            scopes=summaries,
-            total=total,
-            page=page,
-            page_size=page_size,
-            has_more=(page * page_size) < total,
-        )
+        # Use model_validate with camelCase field names for Pydantic v2 compatibility
+        return ScopeListResponse.model_validate({
+            "scopes": summaries,
+            "total": total,
+            "page": page,
+            "pageSize": page_size,
+            "hasMore": (page * page_size) < total,
+        })
     except Exception as exc:
+        # Log the actual exception for debugging
+        import traceback
+        from app.core.logging import get_logger
+        logger = get_logger(__name__)
+        logger.error(f"Error in list_scopes: {exc}")
+        logger.error(traceback.format_exc())
         raise _map_scope_exception(exc) from exc
 
 
@@ -679,27 +693,176 @@ async def extract_scope_from_document(
         raise _map_scope_exception(exc) from exc
 
 
+@router.get("/{scope_id}/features", response_model=ScopeFeaturesResponse)
+async def get_scope_features(
+    scope_id: uuid.UUID,
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+) -> ScopeFeaturesResponse:
+    """
+    Get modules and features for a scope (Features tab).
+    Extracts modules and features from scope sections, excluding status and hours.
+    """
+    try:
+        # Get scope with sections
+        scope = await scope_service.get_scope(session, scope_id, current_user.id, include_sections=True)
+        
+        modules = []
+        
+        # Process sections to extract modules and features
+        for section in sorted(scope.sections, key=lambda x: (x.order_index or 0, x.created_at or datetime.now(timezone.utc))):
+            # Skip overview sections - only process deliverable sections
+            if section.section_type == "overview":
+                continue
+            
+            # Parse section content (stored as JSON string)
+            if not section.content:
+                continue
+                
+            try:
+                content_data = json.loads(section.content) if isinstance(section.content, str) else section.content
+            except (json.JSONDecodeError, TypeError):
+                # If content is not valid JSON, skip this section
+                continue
+            
+            # Check if this section has module structure (name, features, etc.)
+            if isinstance(content_data, dict) and "name" in content_data:
+                # This is a module section
+                module_name = content_data.get("name") or section.title
+                module_description = content_data.get("description") or content_data.get("summary") or ""
+                module_summary = content_data.get("summary") or content_data.get("description") or ""
+                
+                # Extract features
+                features = []
+                features_data = content_data.get("features", [])
+                
+                for feature_data in features_data:
+                    if isinstance(feature_data, dict):
+                        feature_name = feature_data.get("name", "")
+                        feature_description = feature_data.get("description", "")
+                        
+                        # Extract sub-features
+                        sub_features = []
+                        sub_features_data = feature_data.get("sub_features") or feature_data.get("subFeatures", [])
+                        
+                        for sub_feat in sub_features_data:
+                            if isinstance(sub_feat, dict):
+                                sub_features.append(SubFeature(
+                                    name=sub_feat.get("name", ""),
+                                    description=sub_feat.get("description"),
+                                ))
+                            elif isinstance(sub_feat, str):
+                                sub_features.append(SubFeature(
+                                    name=sub_feat,
+                                    description=None,
+                                ))
+                        
+                        if feature_name:  # Only add if feature has a name
+                            features.append(FeatureItem(
+                                name=feature_name,
+                                description=feature_description if feature_description else None,
+                                subFeatures=sub_features,
+                            ))
+                
+                # Create module (even if no features, still include the module)
+                modules.append(ModuleItem(
+                    name=module_name,
+                    description=module_description if module_description else None,
+                    summary=module_summary if module_summary else None,
+                    features=features,
+                ))
+        
+        return ScopeFeaturesResponse(modules=modules)
+        
+    except Exception as exc:
+        raise _map_scope_exception(exc) from exc
+
+
+@router.get("/{scope_id}/document")
+async def get_scope_document(
+    scope_id: uuid.UUID,
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+) -> dict:
+    """
+    Get the full scope document JSON for a scope.
+    Returns the original scope document structure generated by the LLM.
+    """
+    try:
+        import json
+        
+        scope = await scope_service.get_scope(session, scope_id, current_user.id, include_sections=False)
+        
+        if not scope.scope_document_json:
+            raise HTTPException(
+                status_code=404,
+                detail="Scope document not found. This scope may not have been generated from a document yet."
+            )
+        
+        # Parse and return the scope document JSON
+        try:
+            scope_document = json.loads(scope.scope_document_json)
+            return {
+                "scopeId": str(scope_id),
+                "document": scope_document,
+            }
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse scope document JSON for scope {scope_id}: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail="Scope document is corrupted and cannot be parsed."
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _map_scope_exception(exc) from exc
+
+
 # Helper Functions
 
 
 async def _build_scope_detail(session, scope: Scope, user_id: uuid.UUID) -> ScopeDetail:
     """Build ScopeDetail response with sections and counts."""
-    # Get sections
-    sections = [
-        ScopeSectionPublic(
-            id=s.id,
-            scope_id=s.scope_id,
-            title=s.title,
-            content=s.content,
-            section_type=s.section_type,
-            order_index=s.order_index,
-            ai_generated=s.ai_generated,
-            confidence_score=s.confidence_score,
-            created_at=s.created_at,
-            updated_at=s.updated_at,
-        )
-        for s in sorted(scope.sections, key=lambda x: (x.order_index, x.created_at))
-    ]
+    from datetime import datetime, timezone
+    
+    # Get sections - ensure all fields are properly loaded and set
+    sections = []
+    now = datetime.now(timezone.utc)
+    
+    # Refresh sections to ensure all attributes are loaded
+    for s in scope.sections:
+        await session.refresh(s)
+    
+    for s in sorted(scope.sections, key=lambda x: (getattr(x, 'order_index', None) or 0, getattr(x, 'created_at', None) or now)):
+        # Explicitly get all fields with proper defaults
+        section_id = s.id if hasattr(s, 'id') and s.id is not None else None
+        section_scope_id = s.scope_id if hasattr(s, 'scope_id') and s.scope_id is not None else scope.id
+        section_title = s.title if hasattr(s, 'title') and s.title is not None else ""
+        section_content = s.content if hasattr(s, 'content') else None
+        section_type = s.section_type if hasattr(s, 'section_type') else None
+        section_order = s.order_index if hasattr(s, 'order_index') and s.order_index is not None else 0
+        section_ai_generated = s.ai_generated if hasattr(s, 'ai_generated') and s.ai_generated is not None else False
+        section_confidence = s.confidence_score if hasattr(s, 'confidence_score') and s.confidence_score is not None else 0
+        section_created = s.created_at if hasattr(s, 'created_at') and s.created_at is not None else now
+        section_updated = s.updated_at if hasattr(s, 'updated_at') and s.updated_at is not None else now
+        
+        # Build section_data dict using alias names (camelCase) for Pydantic v2 compatibility
+        # Even though schema has allow_population_by_field_name=True, using aliases directly is safer
+        section_data = {
+            'id': section_id,
+            'scopeId': section_scope_id,  # Use alias name directly
+            'title': section_title,
+            'content': section_content,
+            'sectionType': section_type,  # Use alias name directly
+            'orderIndex': section_order,  # Use alias name directly
+            'aiGenerated': section_ai_generated,  # Use alias name directly
+            'confidenceScore': section_confidence,  # Use alias name directly
+            'createdAt': section_created,  # Use alias name directly
+            'updatedAt': section_updated,  # Use alias name directly
+        }
+        # Use model_validate for Pydantic v2 compatibility
+        sections.append(ScopeSectionPublic.model_validate(section_data))
 
     # Get document count
     doc_count_stmt = select(func.count()).select_from(Document).where(Document.scope_id == scope.id)
@@ -714,24 +877,35 @@ async def _build_scope_detail(session, scope: Scope, user_id: uuid.UUID) -> Scop
     # Check if favourited
     is_favourite = await scope_service.get_scope_favourite(session, scope.id, user_id) is not None
 
-    return ScopeDetail(
-        id=scope.id,
-        workspace_id=scope.workspace_id,
-        project_id=scope.project_id,
-        title=scope.title,
-        description=scope.description,
-        status=scope.status,
-        progress=scope.progress,
-        confidence_score=scope.confidence_score,
-        risk_level=scope.risk_level,
-        due_date=scope.due_date,
-        created_by=scope.created_by,
-        created_at=scope.created_at,
-        updated_at=scope.updated_at,
-        sections=sections,
-        documents_count=documents_count,
-        comments_count=comments_count,
-        is_favourite=is_favourite,
-    )
+    # Build ScopeDetail with camelCase alias names for Pydantic v2 compatibility
+    scope_detail_data = {
+        'id': scope.id,
+        'workspaceId': scope.workspace_id if scope.workspace_id is not None else None,
+        'projectId': scope.project_id if scope.project_id is not None else None,
+        'title': scope.title if scope.title is not None else "",
+        'description': scope.description if scope.description is not None else None,
+        'status': scope.status if scope.status is not None else "draft",
+        'progress': scope.progress if scope.progress is not None else 0,
+        'confidenceScore': scope.confidence_score if scope.confidence_score is not None else 0,
+        'riskLevel': scope.risk_level if scope.risk_level is not None else "low",
+        'dueDate': scope.due_date if scope.due_date is not None else None,
+        'createdBy': scope.created_by if scope.created_by is not None else None,
+        'createdAt': scope.created_at if scope.created_at is not None else now,
+        'updatedAt': scope.updated_at if scope.updated_at is not None else now,
+        'sections': sections,
+        'documentsCount': documents_count,
+        'commentsCount': comments_count,
+        'isFavourite': is_favourite,
+    }
+    
+    # Add optional fields if they exist
+    if hasattr(scope, 'project') and scope.project:
+        scope_detail_data['projectName'] = scope.project.name if hasattr(scope.project, 'name') else None
+        if hasattr(scope.project, 'client_id') and scope.project.client_id:
+            scope_detail_data['clientId'] = scope.project.client_id
+        if hasattr(scope.project, 'client') and scope.project.client and hasattr(scope.project.client, 'name'):
+            scope_detail_data['clientName'] = scope.project.client.name
+    
+    return ScopeDetail.model_validate(scope_detail_data)
 
 

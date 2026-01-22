@@ -32,6 +32,7 @@ class Scope(Base):
     confidence_score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     risk_level: Mapped[str] = mapped_column(String(50), default="low", nullable=False)
     due_date: Mapped[Optional[DateTime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    scope_document_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Full scope document JSON from LLM
     created_by: Mapped[Optional[uuid.UUID]] = mapped_column(
         GUID(), ForeignKey("users.id"), nullable=True
     )

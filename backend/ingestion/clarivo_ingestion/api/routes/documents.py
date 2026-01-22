@@ -311,7 +311,7 @@ async def extract_for_scope(
         # Template structure should be passed from main backend
         # If not provided, LLM will generate without template guidance
     
-    # Generate scope
+        # Generate scope
     try:
         generated_scope = await llm_generator.generate(document.content, template_structure=template_structure)
         
@@ -327,12 +327,23 @@ async def extract_for_scope(
             ScopeSectionData(**section_data) for section_data in scope_sections_data
         ]
         
+        # Convert scope document to dict for JSON serialization
+        import json
+        scope_document_dict = None
+        try:
+            if generated_scope:
+                # Convert Pydantic model to dict
+                scope_document_dict = generated_scope.model_dump() if hasattr(generated_scope, 'model_dump') else generated_scope.dict()
+        except Exception as e:
+            logger.warning(f"Failed to serialize scope document: {e}")
+        
         extraction_id = uuid4()
         
         return ScopeExtractForScopeResponse(
             extraction_id=extraction_id,
             status="completed",
             scope_sections=scope_sections,
+            scope_document=scope_document_dict,
             confidence_score=85,  # TODO: Calculate from LLM response
             risk_level="low",  # TODO: Calculate from scope complexity
             total_hours=0,  # No hours estimation
@@ -362,12 +373,22 @@ async def extract_for_scope(
                 ScopeSectionData(**section_data) for section_data in scope_sections_data
             ]
             
+            # Convert scope document to dict for JSON serialization
+            import json
+            scope_document_dict = None
+            try:
+                if generated_scope:
+                    scope_document_dict = generated_scope.model_dump() if hasattr(generated_scope, 'model_dump') else generated_scope.dict()
+            except Exception as e:
+                logger.warning(f"Failed to serialize scope document from heuristic parser: {e}")
+            
             extraction_id = uuid4()
             
             return ScopeExtractForScopeResponse(
                 extraction_id=extraction_id,
                 status="completed",
                 scope_sections=scope_sections,
+                scope_document=scope_document_dict,
                 confidence_score=70,  # Lower confidence for heuristic parser
                 risk_level="medium",  # Higher risk for heuristic parser
                 total_hours=0,

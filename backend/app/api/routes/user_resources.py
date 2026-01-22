@@ -31,16 +31,58 @@ async def get_user_clients(
     Returns clients from workspaces the user is a member of.
     """
     try:
-        clients = await user_resources_service.get_user_accessible_clients(
+        from app.services import client as client_service
+        
+        # Use the same service function as /api/clients to ensure consistency
+        clients, total = await client_service.list_clients(
             session,
             current_user.id,
             workspace_id=workspace_id,
+            status=None,  # Get all clients regardless of status for dropdown
+            search=None,
+            page=1,
+            page_size=1000,  # Get all clients (high limit for dropdown)
         )
         
-        return [
-            ClientSummary.model_validate(client)
-            for client in clients
-        ]
+        # Build client summaries with proper formatting
+        client_summaries = []
+        for c in clients:
+            # Compute location
+            location = client_service._compute_location(c.city, c.state, c.country)
+            
+            # Get project and scope counts
+            project_count = await client_service._get_client_project_count(session, c)
+            scope_count = await client_service._get_client_scope_count(session, c)
+            
+            # Use model_validate with camelCase field names for Pydantic v2 compatibility
+            client_summaries.append(
+                ClientSummary.model_validate({
+                    "id": c.id,
+                    "workspaceId": c.workspace_id,
+                    "name": c.name,
+                    "logoUrl": c.logo_url,
+                    "status": c.status,
+                    "industry": c.industry,
+                    "contactName": c.contact_name or "",
+                    "contactEmail": c.contact_email or "",
+                    "contactPhone": c.contact_phone,
+                    "healthScore": c.health_score or 0,
+                    "source": c.source,
+                    "notes": c.notes,
+                    "location": location,
+                    "city": c.city,
+                    "state": c.state,
+                    "country": c.country,
+                    "companySize": c.company_size,
+                    "projectCount": project_count,
+                    "scopeCount": scope_count,
+                    "createdAt": c.created_at,
+                    "updatedAt": c.updated_at,
+                    "lastActivity": c.last_activity,
+                })
+            )
+        
+        return client_summaries
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

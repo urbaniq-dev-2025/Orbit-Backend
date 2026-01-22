@@ -11,6 +11,7 @@ from app.models import Scope
 from app.schemas.project import (
     ProjectCreate,
     ProjectDetail,
+    ProjectListResponse,
     ProjectProgressUpdate,
     ProjectStatus,
     ProjectStatusUpdate,
@@ -37,15 +38,15 @@ def _map_project_exception(exc: Exception) -> HTTPException:
     )
 
 
-@router.get("", response_model=List[ProjectSummary])
+@router.get("", response_model=ProjectListResponse)
 async def list_projects(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
     workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
     status: Optional[str] = Query(None),
     page_size: Optional[int] = Query(None, alias="pageSize"),
-) -> List[ProjectSummary]:
-    """List projects with filters."""
+) -> ProjectListResponse:
+    """List projects with filters and statistics."""
     try:
         # ProjectStatus is a Literal type, so we can pass the string directly if valid
         project_status: Optional[ProjectStatus] = None
@@ -59,21 +60,39 @@ async def list_projects(
             status=project_status,
         )
 
-        return [
-            ProjectSummary(
-                id=p.id,
-                workspaceId=p.workspace_id,
-                name=p.name,
-                description=p.description,
-                clientId=p.client_id,
-                clientName=p.client_name,
-                status=p.status,
-                createdBy=p.created_by,
-                createdAt=p.created_at,
-                updatedAt=p.updated_at,
-            )
+        # Build project summaries
+        projects = [
+            ProjectSummary.model_validate({
+                "id": p.id,
+                "workspaceId": p.workspace_id,
+                "name": p.name,
+                "description": p.description,
+                "clientId": p.client_id,
+                "clientName": p.client_name,
+                "status": p.status,
+                "createdBy": p.created_by,
+                "createdAt": p.created_at,
+                "updatedAt": p.updated_at,
+            })
             for p in project_list
         ]
+        
+        # Calculate stats
+        stats = {
+            "total": len(project_list),
+            "active": sum(1 for p in project_list if p.status == "active"),
+            "archived": sum(1 for p in project_list if p.status == "archived"),
+            "completed": sum(1 for p in project_list if p.status == "completed"),
+            "on_hold": sum(1 for p in project_list if p.status == "on_hold"),
+            "byStatus": {
+                "active": sum(1 for p in project_list if p.status == "active"),
+                "archived": sum(1 for p in project_list if p.status == "archived"),
+                "completed": sum(1 for p in project_list if p.status == "completed"),
+                "on_hold": sum(1 for p in project_list if p.status == "on_hold"),
+            }
+        }
+
+        return ProjectListResponse(projects=projects, stats=stats)
     except Exception as exc:
         raise _map_project_exception(exc) from exc
 
@@ -202,21 +221,23 @@ async def _build_project_detail(session, project) -> ProjectDetail:
     scope_count_result = await session.execute(scope_count_stmt)
     scopes_count = scope_count_result.scalar_one() or 0
 
-    return ProjectDetail(
-        id=project.id,
-        workspace_id=project.workspace_id,
-        name=project.name,
-        description=project.description,
-        client_name=project.client_name,
-        status=project.status,
-        created_by=project.created_by,
-        created_at=project.created_at,
-        updated_at=project.updated_at,
-        scopes_count=scopes_count,
-        engagement_type=getattr(project, "engagement_type", None),
-        progress=getattr(project, "progress", 0),
-        budget=float(project.budget) if project.budget else None,
-        team=project.team if project.team else None,
-    )
+    # Use model_validate with camelCase field names for Pydantic v2 compatibility
+    return ProjectDetail.model_validate({
+        "id": project.id,
+        "workspaceId": project.workspace_id,
+        "name": project.name,
+        "description": project.description,
+        "clientId": project.client_id,
+        "clientName": project.client_name,
+        "status": project.status,
+        "createdBy": project.created_by,
+        "createdAt": project.created_at,
+        "updatedAt": project.updated_at,
+        "scopesCount": scopes_count,
+        "engagementType": getattr(project, "engagement_type", None),
+        "progress": getattr(project, "progress", 0) or 0,
+        "budget": float(project.budget) if project.budget else None,
+        "team": project.team if project.team else None,
+    })
 
 

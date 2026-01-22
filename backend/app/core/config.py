@@ -4,7 +4,8 @@ import json
 from functools import lru_cache
 from typing import List, Optional, Union
 
-from pydantic import AnyHttpUrl, BaseSettings, Field, validator
+from pydantic import AnyHttpUrl, Field, validator
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):

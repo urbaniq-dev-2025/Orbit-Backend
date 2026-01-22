@@ -123,14 +123,17 @@ async def create_client(
     if not await _check_workspace_access(session, payload.workspace_id, user_id):
         raise ClientAccessError("Access denied to workspace")
 
-    # Check for duplicate email in workspace
-    existing_stmt = select(Client).where(
-        Client.workspace_id == payload.workspace_id,
-        Client.contact_email == payload.contact_email,
-    )
-    existing_result = await session.execute(existing_stmt)
-    if existing_result.scalar_one_or_none():
-        raise ValueError("Client with this email already exists in this workspace")
+    # Check for duplicate email in workspace (case-insensitive)
+    if payload.contact_email:
+        from sqlalchemy import func
+        existing_stmt = select(Client).where(
+            Client.workspace_id == payload.workspace_id,
+            func.lower(Client.contact_email) == func.lower(payload.contact_email),
+        )
+        existing_result = await session.execute(existing_stmt)
+        existing_client = existing_result.scalar_one_or_none()
+        if existing_client:
+            raise ValueError(f"Client with email '{payload.contact_email}' already exists in this workspace (existing client: '{existing_client.name}')")
 
     client = Client(
         workspace_id=payload.workspace_id,
@@ -170,15 +173,17 @@ async def update_client(
     if payload.contact_name is not None:
         client.contact_name = payload.contact_name
     if payload.contact_email is not None:
-        # Check for duplicate email in workspace
+        # Check for duplicate email in workspace (case-insensitive)
+        from sqlalchemy import func
         existing_stmt = select(Client).where(
             Client.workspace_id == client.workspace_id,
-            Client.contact_email == payload.contact_email,
+            func.lower(Client.contact_email) == func.lower(payload.contact_email),
             Client.id != client_id,
         )
         existing_result = await session.execute(existing_stmt)
-        if existing_result.scalar_one_or_none():
-            raise ValueError("Client with this email already exists in this workspace")
+        existing_client = existing_result.scalar_one_or_none()
+        if existing_client:
+            raise ValueError(f"Client with email '{payload.contact_email}' already exists in this workspace (existing client: '{existing_client.name}')")
         client.contact_email = payload.contact_email
     if payload.contact_phone is not None:
         client.contact_phone = payload.contact_phone

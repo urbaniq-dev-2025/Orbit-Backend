@@ -32,21 +32,24 @@ async def get_user_accessible_clients(
         WorkspaceMember.user_id == user_id,
         WorkspaceMember.status == "active",
     )
-    if workspace_id:
-        workspace_stmt = workspace_stmt.where(WorkspaceMember.workspace_id == workspace_id)
-    
     workspace_result = await session.execute(workspace_stmt)
     accessible_workspace_ids = [row[0] for row in workspace_result.all()]
 
     if not accessible_workspace_ids:
         return []
 
-    # Get clients from accessible workspaces
-    client_stmt = (
-        select(Client)
-        .where(Client.workspace_id.in_(accessible_workspace_ids))
-        .order_by(Client.name.asc())
-    )
+    # Build client query
+    client_stmt = select(Client).where(Client.workspace_id.in_(accessible_workspace_ids))
+    
+    # Apply workspace filter if provided
+    if workspace_id:
+        if workspace_id in accessible_workspace_ids:
+            client_stmt = client_stmt.where(Client.workspace_id == workspace_id)
+        else:
+            # User doesn't have access to this workspace
+            return []
+    
+    client_stmt = client_stmt.order_by(Client.name.asc())
     
     result = await session.execute(client_stmt)
     return list(result.scalars().all())

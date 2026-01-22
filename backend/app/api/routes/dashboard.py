@@ -28,7 +28,8 @@ async def get_dashboard_stats(
         stats = await dashboard_service.get_dashboard_stats(
             session, current_user.id, workspace_id=workspace_id
         )
-        return DashboardStatsResponse(**stats)
+        # Use model_validate for Pydantic v2 compatibility
+        return DashboardStatsResponse.model_validate(stats)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

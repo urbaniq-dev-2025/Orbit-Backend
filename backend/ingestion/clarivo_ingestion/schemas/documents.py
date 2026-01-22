@@ -118,6 +118,7 @@ class ScopeExtractForScopeResponse(BaseModel):
     extraction_id: UUID = Field(..., alias="extractionId")
     status: str
     scope_sections: list[ScopeSectionData] = Field(default_factory=list, alias="scopeSections")
+    scope_document: dict | None = Field(None, alias="scopeDocument")  # Full scope document JSON
     confidence_score: int = Field(0, alias="confidenceScore")
     risk_level: str = Field("low", alias="riskLevel")
     total_hours: float = Field(0, alias="totalHours")

@@ -57,7 +57,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("OPENAI_API_KEY", "openai_api_key"),
     )
     openai_model: str = Field(
-        default="gpt-4o-mini",
+        default="gpt-4-turbo",
         validation_alias=AliasChoices("OPENAI_MODEL", "openai_model"),
     )
     openai_api_url: AnyHttpUrl = Field(

@@ -169,6 +169,16 @@ async def create_scope_with_input(
                         logger.warning(f"Extraction timeout for scope {scope.id}: {extraction_error}. Extraction will continue in background.")
                         # Return extraction_id even on timeout - extraction continues in background
                         extraction_id = str(uuid.uuid4())
+                    elif isinstance(extraction_error, (httpx.HTTPStatusError, httpx.RequestError)):
+                        # Handle HTTP errors (500, connection errors, etc.)
+                        error_msg = str(extraction_error)
+                        if "500" in error_msg or "Internal Server Error" in error_msg:
+                            logger.warning(f"Extraction service error for scope {scope.id}: {extraction_error}. This may be due to OpenAI API issues. Extraction may continue in background.")
+                            # Return extraction_id to indicate processing attempt - ingestion service may retry
+                            extraction_id = str(uuid.uuid4())
+                        else:
+                            logger.warning(f"Extraction failed for scope {scope.id}: {extraction_error}")
+                            extraction_id = None
                     else:
                         logger.warning(f"Extraction failed for scope {scope.id}: {extraction_error}")
                         # Continue without extraction - scope is still created
