@@ -149,7 +149,7 @@ class ScopeReorderRequest(BaseModel):
 
 
 class ScopeExportRequest(BaseModel):
-    format: Literal["pdf", "docx"] = Field(..., description="Export format")
+    format: Literal["pdf", "docx", "print"] = Field(..., description="Export format: pdf, docx, or print")
     include_sections: bool = Field(True, alias="includeSections", description="Include all sections")
     template: Literal["standard", "detailed"] = Field("standard", description="Export template")
 
@@ -158,8 +158,9 @@ class ScopeExportRequest(BaseModel):
 
 
 class ScopeExportResponse(BaseModel):
-    download_url: str = Field(..., alias="downloadUrl")
-    expires_at: datetime = Field(..., alias="expiresAt")
+    download_url: Optional[str] = Field(None, alias="downloadUrl", description="Download URL for PDF/DOCX exports")
+    expires_at: Optional[datetime] = Field(None, alias="expiresAt", description="Expiration time for download URL")
+    print_data: Optional[dict] = Field(None, alias="printData", description="Print-optimized data for print format")
 
     class Config:
         populate_by_name = True  # Pydantic v2: renamed from allow_population_by_field_name

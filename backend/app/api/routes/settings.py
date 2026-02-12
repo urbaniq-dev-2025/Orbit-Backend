@@ -4,14 +4,17 @@ API routes for Settings page functionality.
 
 from __future__ import annotations
 
+import datetime as dt
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, Response, status
+from sqlalchemy import select, desc, func
 
 from app.api import deps
+from app.core.config import get_settings
 from app.core.logging import get_logger
-from app.models import User
+from app.models import User, TeamMember
 from app.schemas.settings import (
     AccountDeletionRequest,
     AccountDeletionResponse,
@@ -200,7 +203,7 @@ async def get_security_status(
             .order_by(desc(UserSession.last_active))
             .limit(10)
         )
-        sessions_result = await db_session.execute(sessions_stmt)
+        sessions_result = await session.execute(sessions_stmt)
         sessions = sessions_result.scalars().all()
         
         # Get recent login activity
@@ -210,7 +213,7 @@ async def get_security_status(
             .order_by(desc(LoginActivity.timestamp))
             .limit(10)
         )
-        activity_result = await db_session.execute(activity_stmt)
+        activity_result = await session.execute(activity_stmt)
         activities = activity_result.scalars().all()
         
         return SecurityStatusResponse(
@@ -881,4 +884,935 @@ async def remove_team_member(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to remove team member",
+        ) from e
+
+
+# 2FA Management
+@router.post("/auth/2fa/enable", response_model=TwoFactorEnableResponse)
+async def enable_2fa(
+    payload: TwoFactorEnableRequest,
+    session: deps.SessionDep,
+    current_user: User = Depends(deps.get_current_user),
+) -> TwoFactorEnableResponse:
+    """Enable two-factor authentication for current user."""
+    try:
+        import pyotp
+        import qrcode
+        import io
+        import base64
+        import secrets
+        
+        if current_user.two_factor_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="2FA is already enabled",
+            )
+        
+        if payload.method == "totp":
+            # Generate TOTP secret
+            secret = pyotp.random_base32()
+            current_user.two_factor_secret = secret
+            current_user.two_factor_method = "totp"
+            
+            # Generate QR code
+            totp_uri = pyotp.totp.TOTP(secret).provisioning_uri(
+                name=current_user.email,
+                issuer_name="Orbit"
+            )
+            qr = qrcode.QRCode(version=1, box_size=10, border=5)
+            qr.add_data(totp_uri)
+            qr.make(fit=True)
+            img = qr.make_image(fill_color="black", back_color="white")
+            
+            buffer = io.BytesIO()
+            img.save(buffer, format="PNG")
+            qr_code_data = base64.b64encode(buffer.getvalue()).decode()
+            qr_code = f"data:image/png;base64,{qr_code_data}"
+            
+            # Generate backup codes
+            backup_codes = [secrets.token_hex(4).upper() for _ in range(8)]
+            current_user.two_factor_backup_codes = backup_codes
+            
+        elif payload.method == "sms":
+            if not payload.phone_number:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Phone number is required for SMS 2FA",
+                )
+            # For SMS, we'd integrate with an SMS provider
+            # For now, just store the method and phone
+            current_user.two_factor_secret = None
+            current_user.two_factor_method = "sms"
+            current_user.phone = payload.phone_number
+            qr_code = None
+            secret = None
+            backup_codes = []
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid 2FA method",
+            )
+        
+        # Don't enable yet - user needs to verify first
+        # current_user.two_factor_enabled = True
+        await session.commit()
+        
+        return TwoFactorEnableResponse(
+            qr_code=qr_code,
+            secret=secret,
+            backup_codes=backup_codes,
+            message="2FA setup initiated. Please verify with a code to complete setup.",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to enable 2FA: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to enable 2FA",
+        ) from e
+
+
+@router.post("/auth/2fa/disable", response_model=dict)
+async def disable_2fa(
+    payload: TwoFactorDisableRequest,
+    session: deps.SessionDep,
+    current_user: User = Depends(deps.get_current_user),
+) -> dict:
+    """Disable two-factor authentication for current user."""
+    try:
+        from app.core.security import verify_password
+        
+        if not current_user.two_factor_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="2FA is not enabled",
+            )
+        
+        # Verify password
+        if not verify_password(payload.password, current_user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid password",
+            )
+        
+        # Verify 2FA code if provided
+        if payload.verification_code:
+            import pyotp
+            if current_user.two_factor_method == "totp" and current_user.two_factor_secret:
+                totp = pyotp.TOTP(current_user.two_factor_secret)
+                if not totp.verify(payload.verification_code, valid_window=1):
+                    # Check backup codes
+                    backup_codes = current_user.two_factor_backup_codes or []
+                    if payload.verification_code not in backup_codes:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Invalid verification code",
+                        )
+                    # Remove used backup code
+                    backup_codes.remove(payload.verification_code)
+                    current_user.two_factor_backup_codes = backup_codes
+        
+        # Disable 2FA
+        current_user.two_factor_enabled = False
+        current_user.two_factor_secret = None
+        current_user.two_factor_method = None
+        current_user.two_factor_backup_codes = None
+        
+        await session.commit()
+        
+        return {"message": "2FA disabled successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to disable 2FA: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to disable 2FA",
+        ) from e
+
+
+# Email Verification
+@router.post("/auth/verify/resend", response_model=EmailVerificationSendResponse)
+async def resend_email_verification(
+    session: deps.SessionDep,
+    current_user: User = Depends(deps.get_current_user),
+) -> EmailVerificationSendResponse:
+    """Resend email verification."""
+    try:
+        if current_user.email_verified:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email is already verified",
+            )
+        
+        from app.services.email import get_email_dispatcher
+        from app.core.security import create_state_token
+        import datetime as dt
+        
+        # Generate verification token
+        token_data = {
+            "user_id": str(current_user.id),
+            "email": current_user.email,
+            "type": "email_verification",
+            "exp": int((dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=24)).timestamp()),
+        }
+        token = create_state_token(token_data)
+        
+        # Send verification email
+        dispatcher = get_email_dispatcher()
+        verification_url = f"{get_settings().frontend_url}/verify-email?token={token}"
+        await dispatcher.send_email_verification(current_user.email, verification_url)
+        
+        return EmailVerificationSendResponse(
+            message="Verification email sent successfully"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to resend verification email: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send verification email",
+        ) from e
+
+
+# Get Team Details
+@router.get("/teams/{team_id}", response_model=TeamResponse)
+async def get_team_details(
+    team_id: uuid.UUID,
+    session: deps.SessionDep,
+    current_user: User = Depends(deps.get_current_user),
+) -> TeamResponse:
+    """Get team details with members."""
+    try:
+        from app.services import teams as team_service
+        
+        team, user_role = await team_service.get_team(session, team_id, current_user.id)
+        
+        # Get member count
+        member_count_stmt = select(func.count()).select_from(
+            select(TeamMember).where(TeamMember.team_id == team_id).subquery()
+        )
+        member_count_result = await session.execute(member_count_stmt)
+        member_count = member_count_result.scalar_one() or 0
+        
+        return TeamResponse(
+            id=team.id,
+            name=team.name,
+            description=team.description,
+            workspace_id=team.workspace_id,
+            member_count=member_count,
+            role=user_role,
+            created_at=team.created_at,
+            updated_at=team.updated_at,
+        )
+    except team_service.TeamNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Team not found",
+        )
+    except team_service.TeamAccessError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied",
+        )
+    except Exception as e:
+        logger.error(f"Failed to get team details: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve team details",
+        ) from e
+
+
+# Leave Team
+@router.post("/teams/{team_id}/leave", status_code=status.HTTP_200_OK)
+async def leave_team(
+    team_id: uuid.UUID,
+    session: deps.SessionDep,
+    current_user: User = Depends(deps.get_current_user),
+) -> dict:
+    """Leave a team."""
+    try:
+        from app.services import teams as team_service
+        
+        # Get team member
+        member_stmt = select(TeamMember).where(
+            TeamMember.team_id == team_id,
+            TeamMember.user_id == current_user.id,
+        )
+        member_result = await session.execute(member_stmt)
+        member = member_result.scalar_one_or_none()
+        
+        if not member:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="You are not a member of this team",
+            )
+        
+        # Check if user is the owner
+        if member.role == "owner":
+            # Check if there are other members
+            other_members_stmt = select(TeamMember).where(
+                TeamMember.team_id == team_id,
+                TeamMember.user_id != current_user.id,
+            )
+            other_members_result = await session.execute(other_members_stmt)
+            other_members = other_members_result.scalars().all()
+            
+            if other_members:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Team owner cannot leave. Transfer ownership first or delete the team.",
+                )
+        
+        # Remove member
+        await session.delete(member)
+        await session.commit()
+        
+        return {"message": "Left team successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to leave team: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to leave team",
+        ) from e
+
+
+# Invitation Management
+@router.post("/workspaces/{workspace_id}/invitations/{invitation_id}/resend", status_code=status.HTTP_200_OK)
+async def resend_invitation(
+    workspace_id: uuid.UUID,
+    invitation_id: uuid.UUID,
+    session: deps.SessionDep,
+    current_user: User = Depends(deps.get_current_user),
+) -> dict:
+    """Resend a workspace invitation."""
+    try:
+        from app.models import WorkspaceMember
+        from app.services import workspaces as workspace_service
+        from app.services.email import get_email_dispatcher
+        
+        # Verify access
+        await workspace_service.get_workspace_for_user(session, workspace_id, current_user.id, include_members=False)
+        
+        # Get invitation
+        invite_stmt = select(WorkspaceMember).where(
+            WorkspaceMember.id == invitation_id,
+            WorkspaceMember.workspace_id == workspace_id,
+            WorkspaceMember.user_id.is_(None),  # Pending invitation
+        )
+        invite_result = await session.execute(invite_stmt)
+        invitation = invite_result.scalar_one_or_none()
+        
+        if not invitation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Invitation not found",
+            )
+        
+        # Resend invitation email
+        dispatcher = get_email_dispatcher()
+        await dispatcher.send_workspace_invitation(
+            invitation.invited_email or "",
+            workspace_id,
+            invitation.role,
+        )
+        
+        return {"message": "Invitation resent successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to resend invitation: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to resend invitation",
+        ) from e
+
+
+@router.delete("/workspaces/{workspace_id}/invitations/{invitation_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def cancel_invitation(
+    workspace_id: uuid.UUID,
+    invitation_id: uuid.UUID,
+    session: deps.SessionDep,
+    current_user: User = Depends(deps.get_current_user),
+) -> Response:
+    """Cancel a workspace invitation."""
+    try:
+        from app.models import WorkspaceMember
+        from app.services import workspaces as workspace_service
+        
+        # Verify access
+        workspace, membership = await workspace_service.get_workspace_for_user(
+            session, workspace_id, current_user.id, include_members=False
+        )
+        
+        if membership.role not in {"owner", "admin"}:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions",
+            )
+        
+        # Get invitation
+        invite_stmt = select(WorkspaceMember).where(
+            WorkspaceMember.id == invitation_id,
+            WorkspaceMember.workspace_id == workspace_id,
+            WorkspaceMember.user_id.is_(None),  # Pending invitation
+        )
+        invite_result = await session.execute(invite_stmt)
+        invitation = invite_result.scalar_one_or_none()
+        
+        if not invitation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Invitation not found",
+            )
+        
+        # Delete invitation
+        await session.delete(invitation)
+        await session.commit()
+        
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to cancel invitation: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to cancel invitation",
+        ) from e
+
+
+@router.get("/workspaces/{workspace_id}/invitations", response_model=List[dict])
+async def get_pending_invitations(
+    workspace_id: uuid.UUID,
+    session: deps.SessionDep,
+    current_user: User = Depends(deps.get_current_user),
+) -> List[dict]:
+    """Get pending invitations for a workspace."""
+    try:
+        from app.models import WorkspaceMember
+        from app.services import workspaces as workspace_service
+        
+        # Verify access
+        workspace, membership = await workspace_service.get_workspace_for_user(
+            session, workspace_id, current_user.id, include_members=False
+        )
+        
+        if membership.role not in {"owner", "admin"}:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions",
+            )
+        
+        # Get pending invitations
+        invites_stmt = select(WorkspaceMember).where(
+            WorkspaceMember.workspace_id == workspace_id,
+            WorkspaceMember.user_id.is_(None),  # Pending invitations
+            WorkspaceMember.status == "pending",
+        )
+        invites_result = await session.execute(invites_stmt)
+        invitations = invites_result.scalars().all()
+        
+        return [
+            {
+                "id": str(inv.id),
+                "email": inv.invited_email,
+                "role": inv.role,
+                "status": inv.status,
+                "invitedAt": inv.invited_at.isoformat() if inv.invited_at else None,
+                "invitedBy": {
+                    "id": str(inv.invited_by) if inv.invited_by else None,
+                },
+                "expiresAt": (inv.invited_at + dt.timedelta(days=7)).isoformat() if inv.invited_at else None,
+            }
+            for inv in invitations
+        ]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get pending invitations: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve invitations",
+        ) from e
+
+
+# Billing Subscription Management
+@router.get("/billing/subscription", response_model=dict)
+async def get_subscription(
+    session: deps.SessionDep,
+    workspace_id: uuid.UUID = Query(..., alias="workspaceId"),
+    current_user: User = Depends(deps.get_current_user),
+) -> dict:
+    """Get current subscription for a workspace."""
+    try:
+        from app.models import Subscription
+        from app.services import workspaces as workspace_service
+        
+        # Verify workspace access
+        await workspace_service.get_workspace_for_user(session, workspace_id, current_user.id, include_members=False)
+        
+        # Get active subscription
+        sub_stmt = (
+            select(Subscription)
+            .where(
+                Subscription.workspace_id == workspace_id,
+                Subscription.status.in_(["active", "trialing"]),
+            )
+            .order_by(Subscription.created_at.desc())
+            .limit(1)
+        )
+        sub_result = await session.execute(sub_stmt)
+        subscription = sub_result.scalar_one_or_none()
+        
+        if not subscription:
+            return {
+                "id": None,
+                "workspaceId": str(workspace_id),
+                "plan": "free",
+                "tier": "Free",
+                "status": "active",
+                "currentPeriodStart": None,
+                "currentPeriodEnd": None,
+                "cancelAtPeriodEnd": False,
+                "price": 0.0,
+                "billingCycle": "monthly",
+                "currency": "USD",
+                "features": [],
+            }
+        
+        # Map plan to tier name
+        tier_map = {
+            "free": "Free",
+            "starter": "Starter",
+            "pro": "Pro",
+            "team": "Team",
+            "enterprise": "Enterprise",
+        }
+        
+        # Get plan features (simplified - in production, fetch from plan config)
+        features_map = {
+            "free": ["Basic features"],
+            "starter": ["Basic features", "Priority support"],
+            "pro": ["Unlimited scopes", "AI assistance", "Priority support"],
+            "team": ["Unlimited scopes", "AI assistance", "Team collaboration", "Priority support"],
+            "enterprise": ["Everything in Team", "Custom integrations", "Dedicated support"],
+        }
+        
+        # Get plan price (simplified - in production, fetch from plan config)
+        price_map = {
+            "free": 0.0,
+            "starter": 9.99,
+            "pro": 29.99,
+            "team": 79.99,
+            "enterprise": 199.99,
+        }
+        
+        return {
+            "id": str(subscription.id),
+            "workspaceId": str(subscription.workspace_id),
+            "plan": subscription.plan,
+            "tier": tier_map.get(subscription.plan, subscription.plan.title()),
+            "status": subscription.status,
+            "currentPeriodStart": subscription.current_period_start.isoformat() if subscription.current_period_start else None,
+            "currentPeriodEnd": subscription.current_period_end.isoformat() if subscription.current_period_end else None,
+            "cancelAtPeriodEnd": subscription.cancel_at_period_end,
+            "price": price_map.get(subscription.plan, 0.0),
+            "billingCycle": subscription.billing_cycle,
+            "currency": "USD",
+            "features": features_map.get(subscription.plan, []),
+        }
+    except workspace_service.WorkspaceNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workspace not found",
+        )
+    except workspace_service.WorkspaceAccessError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied",
+        )
+    except Exception as e:
+        logger.error(f"Failed to get subscription: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve subscription",
+        ) from e
+
+
+@router.put("/billing/subscription", response_model=dict)
+async def update_subscription(
+    payload: dict,
+    session: deps.SessionDep,
+    workspace_id: uuid.UUID = Query(..., alias="workspaceId"),
+    current_user: User = Depends(deps.get_current_user),
+) -> dict:
+    """Update subscription plan or billing cycle."""
+    try:
+        from app.models import Subscription
+        from app.services import workspaces as workspace_service
+        
+        # Verify workspace access
+        workspace, membership = await workspace_service.get_workspace_for_user(
+            session, workspace_id, current_user.id, include_members=False
+        )
+        
+        if membership.role not in {"owner", "admin"}:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions",
+            )
+        
+        # Get current subscription
+        sub_stmt = (
+            select(Subscription)
+            .where(
+                Subscription.workspace_id == workspace_id,
+                Subscription.status.in_(["active", "trialing"]),
+            )
+            .order_by(Subscription.created_at.desc())
+            .limit(1)
+        )
+        sub_result = await session.execute(sub_stmt)
+        subscription = sub_result.scalar_one_or_none()
+        
+        if not subscription:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No active subscription found",
+            )
+        
+        # Update subscription (in production, this would integrate with Stripe)
+        if "plan" in payload:
+            subscription.plan = payload["plan"]
+        if "billingCycle" in payload:
+            subscription.billing_cycle = payload["billingCycle"]
+        
+        await session.commit()
+        await session.refresh(subscription)
+        
+        # Return updated subscription (reuse get_subscription logic)
+        return await get_subscription(session, workspace_id, current_user)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update subscription: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update subscription",
+        ) from e
+
+
+@router.post("/billing/subscription/cancel", response_model=dict)
+async def cancel_subscription(
+    payload: dict,
+    session: deps.SessionDep,
+    workspace_id: uuid.UUID = Query(..., alias="workspaceId"),
+    current_user: User = Depends(deps.get_current_user),
+) -> dict:
+    """Cancel subscription at end of billing period."""
+    try:
+        from app.models import Subscription
+        from app.services import workspaces as workspace_service
+        
+        # Verify workspace access
+        workspace, membership = await workspace_service.get_workspace_for_user(
+            session, workspace_id, current_user.id, include_members=False
+        )
+        
+        if membership.role not in {"owner", "admin"}:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions",
+            )
+        
+        # Get current subscription
+        sub_stmt = (
+            select(Subscription)
+            .where(
+                Subscription.workspace_id == workspace_id,
+                Subscription.status.in_(["active", "trialing"]),
+            )
+            .order_by(Subscription.created_at.desc())
+            .limit(1)
+        )
+        sub_result = await session.execute(sub_stmt)
+        subscription = sub_result.scalar_one_or_none()
+        
+        if not subscription:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No active subscription found",
+            )
+        
+        # Cancel at period end
+        subscription.cancel_at_period_end = True
+        subscription.cancellation_reason = payload.get("reason")
+        
+        await session.commit()
+        await session.refresh(subscription)
+        
+        return {
+            "message": "Subscription will cancel at end of billing period",
+            "cancelAt": subscription.current_period_end.isoformat() if subscription.current_period_end else None,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to cancel subscription: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to cancel subscription",
+        ) from e
+
+
+# Payment Methods (Stub - would integrate with Stripe in production)
+@router.get("/billing/payment-methods", response_model=dict)
+async def get_payment_methods(
+    session: deps.SessionDep,
+    workspace_id: uuid.UUID = Query(..., alias="workspaceId"),
+    current_user: User = Depends(deps.get_current_user),
+) -> dict:
+    """Get payment methods for a workspace."""
+    try:
+        from app.services import workspaces as workspace_service
+        
+        # Verify workspace access
+        await workspace_service.get_workspace_for_user(session, workspace_id, current_user.id, include_members=False)
+        
+        # In production, this would fetch from Stripe
+        # For now, return empty list
+        return {"paymentMethods": []}
+    except workspace_service.WorkspaceNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Workspace not found",
+        )
+    except workspace_service.WorkspaceAccessError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied",
+        )
+    except Exception as e:
+        logger.error(f"Failed to get payment methods: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve payment methods",
+        ) from e
+
+
+# Data Export
+@router.post("/data-export", response_model=DataExportResponse, status_code=status.HTTP_202_ACCEPTED)
+async def request_data_export(
+    payload: DataExportRequest,
+    session: deps.SessionDep,
+    current_user: User = Depends(deps.get_current_user),
+) -> DataExportResponse:
+    """Request a data export."""
+    try:
+        from app.models import DataExport
+        from datetime import datetime, timedelta, timezone
+        
+        # Create export record
+        export = DataExport(
+            user_id=current_user.id,
+            workspace_id=payload.workspace_id,
+            data_types=payload.data_types,
+            format=payload.format,
+            status="processing",
+        )
+        session.add(export)
+        await session.flush()
+        
+        # In production, this would trigger a background job
+        # For now, estimate completion time
+        estimated_completion = datetime.now(timezone.utc) + timedelta(minutes=5)
+        
+        return DataExportResponse(
+            export_id=export.id,
+            status="processing",
+            estimated_time=5,  # minutes
+            message="Data export is being processed. You will be notified when it's ready.",
+        )
+    except Exception as e:
+        logger.error(f"Failed to request data export: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to request data export",
+        ) from e
+
+
+@router.get("/data-export/{export_id}", response_model=DataExportStatusResponse)
+async def get_export_status(
+    export_id: uuid.UUID,
+    session: deps.SessionDep,
+    current_user: User = Depends(deps.get_current_user),
+) -> DataExportStatusResponse:
+    """Get data export status."""
+    try:
+        from app.models import DataExport
+        
+        export_stmt = select(DataExport).where(
+            DataExport.id == export_id,
+            DataExport.user_id == current_user.id,
+        )
+        export_result = await session.execute(export_stmt)
+        export = export_result.scalar_one_or_none()
+        
+        if not export:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Export not found",
+            )
+        
+        return DataExportStatusResponse(
+            id=export.id,
+            status=export.status,
+            format=export.format,
+            file_url=export.download_url,
+            file_size=export.file_size,
+            expires_at=export.expires_at,
+            created_at=export.created_at,
+            completed_at=export.completed_at,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get export status: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve export status",
+        ) from e
+
+
+@router.get("/data-export", response_model=DataExportListResponse)
+async def list_data_exports(
+    session: deps.SessionDep,
+    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100, alias="pageSize"),
+    current_user: User = Depends(deps.get_current_user),
+) -> DataExportListResponse:
+    """List data exports for current user."""
+    try:
+        from app.models import DataExport
+        
+        stmt = select(DataExport).where(DataExport.user_id == current_user.id)
+        
+        if workspace_id:
+            stmt = stmt.where(DataExport.workspace_id == workspace_id)
+        
+        # Count total
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        count_result = await session.execute(count_stmt)
+        total = count_result.scalar_one()
+        
+        # Apply pagination
+        offset = (page - 1) * page_size
+        stmt = stmt.order_by(desc(DataExport.created_at)).offset(offset).limit(page_size)
+        
+        result = await session.execute(stmt)
+        exports = result.scalars().all()
+        
+        return DataExportListResponse(
+            exports=[
+                DataExportStatusResponse(
+                    id=exp.id,
+                    status=exp.status,
+                    format=exp.format,
+                    file_url=exp.download_url,
+                    file_size=exp.file_size,
+                    expires_at=exp.expires_at,
+                    created_at=exp.created_at,
+                    completed_at=exp.completed_at,
+                )
+                for exp in exports
+            ],
+            total=total,
+            page=page,
+            page_size=page_size,
+            has_more=(offset + page_size) < total,
+        )
+    except Exception as e:
+        logger.error(f"Failed to list data exports: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve data exports",
+        ) from e
+
+
+@router.get("/data-export/{export_id}/download")
+async def download_data_export(
+    export_id: uuid.UUID,
+    session: deps.SessionDep,
+    current_user: User = Depends(deps.get_current_user),
+) -> Response:
+    """Download a data export file."""
+    try:
+        from app.models import DataExport
+        from pathlib import Path
+        
+        export_stmt = select(DataExport).where(
+            DataExport.id == export_id,
+            DataExport.user_id == current_user.id,
+        )
+        export_result = await session.execute(export_stmt)
+        export = export_result.scalar_one_or_none()
+        
+        if not export:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Export not found",
+            )
+        
+        if export.status != "completed":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Export is not ready for download",
+            )
+        
+        if not export.download_url:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Export file not found",
+            )
+        
+        # In production, this would stream from S3 or similar
+        # For now, return a placeholder
+        file_path = Path(export.download_url)
+        if not file_path.exists():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Export file not found",
+            )
+        
+        file_bytes = file_path.read_bytes()
+        
+        # Determine content type
+        if export.format == "json":
+            media_type = "application/json"
+        elif export.format == "csv":
+            media_type = "text/csv"
+        elif export.format == "pdf":
+            media_type = "application/pdf"
+        else:
+            media_type = "application/octet-stream"
+        
+        return Response(
+            content=file_bytes,
+            media_type=media_type,
+            headers={
+                "Content-Disposition": f'attachment; filename="export_{export_id}.{export.format}"',
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to download export: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to download export",
         ) from e

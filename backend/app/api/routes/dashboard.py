@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -141,13 +142,74 @@ async def get_calendar_events(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
     workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
+    start_date: Optional[date] = Query(None, alias="startDate"),
+    end_date: Optional[date] = Query(None, alias="endDate"),
 ) -> dict:
-    """Get calendar events for dashboard."""
-    # TODO: Implement calendar events when calendar model is available
-    return {
-        "events": [],
-        "total": 0,
-    }
+    """Get calendar events (reminders) for dashboard."""
+    try:
+        from app.services import reminders as reminder_service
+        from datetime import date, timedelta
+        from app.core.logging import get_logger
+        
+        logger = get_logger(__name__)
+        
+        # If no date range provided, default to wider range (3 months back, 3 months forward)
+        if not start_date:
+            today = date.today()
+            start_date = today - timedelta(days=90)  # 3 months back
+        if not end_date:
+            today = date.today()
+            end_date = today + timedelta(days=90)  # 3 months forward
+        
+        logger.info(f"Fetching calendar events for workspace {workspace_id}, date range: {start_date} to {end_date}")
+        
+        reminder_list, total = await reminder_service.list_reminders(
+            session,
+            current_user.id,
+            workspace_id=workspace_id,
+            start_date=start_date,
+            end_date=end_date,
+            page=1,
+            page_size=1000,  # Get all events for the date range
+        )
+        
+        logger.info(f"Found {total} reminders, returning {len(reminder_list)} events")
+        
+        events = []
+        for reminder in reminder_list:
+            # Format time for response
+            time_str = None
+            if reminder.time:
+                time_str = reminder.time.strftime("%H:%M")
+            
+            # Combine date and time for full datetime
+            from datetime import datetime, time, timezone
+            event_datetime = datetime.combine(reminder.date, reminder.time or time(0, 0))
+            event_datetime = event_datetime.replace(tzinfo=timezone.utc)
+            
+            events.append({
+                "id": str(reminder.id),
+                "type": reminder.type,
+                "title": reminder.title,
+                "date": reminder.date.isoformat(),
+                "time": time_str,
+                "datetime": event_datetime.isoformat(),
+                "scopeId": str(reminder.scope_id) if reminder.scope_id else None,
+                "scopeName": reminder.scope.title if reminder.scope else None,
+                "projectId": str(reminder.project_id) if reminder.project_id else None,
+                "projectName": reminder.project.name if reminder.project else None,
+            })
+        
+        return {
+            "events": events,
+            "total": total,
+        }
+    except Exception as exc:
+        logger.error(f"Failed to get calendar events: {exc}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to retrieve calendar events.",
+        ) from exc
 
 
 @router.get("/pipeline/metrics")

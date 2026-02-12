@@ -11,7 +11,7 @@ class ChatContext(BaseModel):
     recent_entities: Optional[List[str]] = Field(None, alias="recentEntities")
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True
 
 
 class ChatRequest(BaseModel):
@@ -21,7 +21,7 @@ class ChatRequest(BaseModel):
     context: Optional[ChatContext] = None
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True
 
 
 class IntentInfo(BaseModel):
@@ -46,4 +46,4 @@ class ChatResponse(BaseModel):
     suggestions: Optional[List[str]] = None
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True

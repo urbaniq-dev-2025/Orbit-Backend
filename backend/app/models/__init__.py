@@ -14,6 +14,7 @@ from .password_reset import PasswordReset
 from .project import Project
 from .proposal import Proposal, ProposalSlide, ProposalView
 from .quotation import Quotation, QuotationItem
+from .reminder import Reminder
 from .scope import Scope, ScopeSection
 from .billing_history import BillingHistory
 from .subscription import Subscription
@@ -50,6 +51,7 @@ __all__ = [
     "ProposalView",
     "Quotation",
     "QuotationItem",
+    "Reminder",
     "Scope",
     "ScopeSection",
     "Subscription",

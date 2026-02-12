@@ -330,15 +330,57 @@ async def get_scope(
 @router.put("/{scope_id}", response_model=ScopeDetail)
 async def update_scope(
     scope_id: uuid.UUID,
-    payload: ScopeUpdate,
+    request: Request,
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
 ) -> ScopeDetail:
     """Update a scope."""
     try:
+        # Parse request body to handle status field conversion
+        body_data = await request.json()
+        
+        # Convert camelCase status to snake_case if needed
+        if "status" in body_data and body_data["status"]:
+            status_value = body_data["status"]
+            # Map camelCase to snake_case
+            status_map = {
+                "inReview": "in_review",
+                "in_review": "in_review",
+                "draft": "draft",
+                "approved": "approved",
+                "rejected": "rejected",
+            }
+            if status_value in status_map:
+                body_data["status"] = status_map[status_value]
+            elif status_value not in ["draft", "in_review", "approved", "rejected"]:
+                # Invalid status value
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid status value: {status_value}. Valid values are: draft, in_review, approved, rejected"
+                )
+        
+        # Convert camelCase field names to snake_case for Pydantic
+        if "dueDate" in body_data:
+            body_data["due_date"] = body_data.pop("dueDate")
+        
+        # Create payload from cleaned data
+        payload = ScopeUpdate(**body_data)
+        
         scope = await scope_service.update_scope(session, scope_id, current_user.id, payload)
+        
+        # Reload scope with sections eagerly loaded to avoid MissingGreenlet error
+        scope = await scope_service.get_scope(session, scope_id, current_user.id, include_sections=True)
+        
         return await _build_scope_detail(session, scope, current_user.id)
+    except HTTPException:
+        raise
     except Exception as exc:
+        # Log the actual exception for debugging
+        from app.core.logging import get_logger
+        import traceback
+        logger = get_logger(__name__)
+        logger.error(f"Error updating scope {scope_id}: {exc}")
+        logger.error(traceback.format_exc())
         raise _map_scope_exception(exc) from exc
 
 
@@ -555,8 +597,12 @@ async def export_scope(
     current_user=Depends(deps.get_current_user),
 ) -> ScopeExportResponse:
     """
-    Export scope to PDF or DOCX format.
-    Note: File storage infrastructure needs to be configured for production use.
+    Export scope to PDF, DOCX, or print format.
+    
+    Formats:
+    - pdf: Returns download URL for PDF file
+    - docx: Returns download URL for Word document
+    - print: Returns print-optimized JSON data
     """
     try:
         result = await scope_service.export_scope(
@@ -567,11 +613,58 @@ async def export_scope(
             include_sections=payload.include_sections,
             template=payload.template,
         )
-        return ScopeExportResponse(
-            download_url=result["download_url"],
-            expires_at=result["expires_at"],
+        return ScopeExportResponse.model_validate({
+            "downloadUrl": result.get("download_url"),
+            "expiresAt": result.get("expires_at"),
+            "printData": result.get("print_data"),
+        })
+    except Exception as exc:
+        raise _map_scope_exception(exc) from exc
+
+
+@router.get("/{scope_id}/exports/{filename}")
+async def download_scope_export(
+    scope_id: uuid.UUID,
+    filename: str,
+    session: deps.SessionDep,
+    current_user=Depends(deps.get_current_user),
+) -> Response:
+    """
+    Download an exported scope file (PDF or DOCX).
+    """
+    try:
+        # Verify scope access
+        await scope_service.get_scope(session, scope_id, current_user.id, include_sections=False)
+        
+        # Load file from storage
+        from pathlib import Path
+        from app.services.scope_export import EXPORT_STORAGE_DIR
+        
+        file_path = EXPORT_STORAGE_DIR / f"{scope_id}_{filename}"
+        
+        if not file_path.exists():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Export file not found")
+        
+        # Determine content type
+        if filename.endswith(".pdf"):
+            media_type = "application/pdf"
+        elif filename.endswith(".docx"):
+            media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        else:
+            media_type = "application/octet-stream"
+        
+        file_bytes = file_path.read_bytes()
+        
+        return Response(
+            content=file_bytes,
+            media_type=media_type,
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+            },
         )
     except Exception as exc:
+        if isinstance(exc, HTTPException):
+            raise
         raise _map_scope_exception(exc) from exc
 
 
@@ -830,11 +923,11 @@ async def _build_scope_detail(session, scope: Scope, user_id: uuid.UUID) -> Scop
     sections = []
     now = datetime.now(timezone.utc)
     
-    # Refresh sections to ensure all attributes are loaded
-    for s in scope.sections:
-        await session.refresh(s)
+    # Access sections (should be eagerly loaded via selectinload)
+    # Convert to list to avoid lazy loading issues
+    scope_sections = list(scope.sections) if scope.sections else []
     
-    for s in sorted(scope.sections, key=lambda x: (getattr(x, 'order_index', None) or 0, getattr(x, 'created_at', None) or now)):
+    for s in sorted(scope_sections, key=lambda x: (getattr(x, 'order_index', None) or 0, getattr(x, 'created_at', None) or now)):
         # Explicitly get all fields with proper defaults
         section_id = s.id if hasattr(s, 'id') and s.id is not None else None
         section_scope_id = s.scope_id if hasattr(s, 'scope_id') and s.scope_id is not None else scope.id
@@ -898,13 +991,54 @@ async def _build_scope_detail(session, scope: Scope, user_id: uuid.UUID) -> Scop
         'isFavourite': is_favourite,
     }
     
-    # Add optional fields if they exist
-    if hasattr(scope, 'project') and scope.project:
-        scope_detail_data['projectName'] = scope.project.name if hasattr(scope.project, 'name') else None
-        if hasattr(scope.project, 'client_id') and scope.project.client_id:
-            scope_detail_data['clientId'] = scope.project.client_id
-        if hasattr(scope.project, 'client') and scope.project.client and hasattr(scope.project.client, 'name'):
-            scope_detail_data['clientName'] = scope.project.client.name
+    # Add project and client info - now loaded eagerly in get_scope()
+    project_name = None
+    client_id = None
+    client_name = None
+    
+    if scope.project_id:
+        # Project is now eagerly loaded via selectinload, safe to access
+        try:
+            # Access project - it should be loaded eagerly
+            project = scope.project
+            if project:
+                project_name = project.name
+                # Client is also loaded eagerly via nested selectinload
+                if project.client:
+                    client_id = project.client.id
+                    client_name = project.client.name
+                elif project.client_id:
+                    # Client ID exists but not loaded, fetch it
+                    from app.models import Client
+                    client_stmt = select(Client).where(Client.id == project.client_id)
+                    client_result = await session.execute(client_stmt)
+                    client = client_result.scalar_one_or_none()
+                    if client:
+                        client_id = client.id
+                        client_name = client.name
+        except Exception as e:
+            # If eager loading didn't work, fetch project separately
+            from app.models import Project, Client
+            from app.core.logging import get_logger
+            logger = get_logger(__name__)
+            logger.warning(f"Failed to access project eagerly for scope {scope.id}: {e}")
+            project_stmt = select(Project).where(Project.id == scope.project_id)
+            project_result = await session.execute(project_stmt)
+            project = project_result.scalar_one_or_none()
+            if project:
+                project_name = project.name
+                if project.client_id:
+                    client_stmt = select(Client).where(Client.id == project.client_id)
+                    client_result = await session.execute(client_stmt)
+                    client = client_result.scalar_one_or_none()
+                    if client:
+                        client_id = client.id
+                        client_name = client.name
+    
+    # Add project and client info to response
+    scope_detail_data['projectName'] = project_name
+    scope_detail_data['clientId'] = client_id
+    scope_detail_data['clientName'] = client_name
     
     return ScopeDetail.model_validate(scope_detail_data)
 

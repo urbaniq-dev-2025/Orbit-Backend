@@ -35,43 +35,37 @@ _CANONICAL_MODULES = [
 
 _SYSTEM_PROMPT = (
     "You are an expert Senior Business Analyst at a top software development agency. "
-    "Your task is to analyze a client requirement document and extract structured information into a comprehensive scope document with hours estimation.\n\n"
+    "Your task is to analyze a client requirement document and extract structured information into a comprehensive scope document.\n\n"
     "CRITICAL INSTRUCTIONS:\n"
     "1. Read the ENTIRE document carefully before extracting information\n"
-    "2. Extract information accurately - do not paraphrase or summarize unless necessary\n"
-    "3. Group related functionality into logical modules\n"
-    "4. Extract specific features with clear names and detailed descriptions\n"
-    "5. Break down features into sub-features for granular estimation\n"
-    "6. Estimate hours for each sub-feature based on complexity and market standards\n"
-    "7. Identify user personas, their goals, and pain points\n"
-    "8. Extract functional, technical, and non-functional requirements\n"
-    "9. Only include information that is explicitly stated in the document\n"
-    "10. If information is missing, leave arrays empty - do not invent details\n\n"
+    "2. Extract the document title/header - look for the main title at the beginning of the document, in headers, or in document metadata\n"
+    "3. Extract information accurately - do not paraphrase or summarize unless necessary\n"
+    "4. Group related functionality into logical technical modules \n"
+    "5. Extract specific features with clear names and detailed descriptions\n"
+    "6. Identify user personas, their goals, and pain points\n"
+    "7. Extract functional, technical, and non-functional requirements\n"
+    "8. Only include information that is explicitly stated in the document\n"
+    "9. If information is missing, leave arrays empty - do not invent details\n\n"
     "When organizing modules and features:\n"
-    "- Group features by functional area (e.g., Authentication, Menu, Payments, etc.)\n"
+    "- Group features by technical area (e.g., Authentication, Menu, Payments, etc.)\n"
     "- Use clear, descriptive names for modules (e.g., 'Customer Profile', 'Menu & Ordering', 'Payment & Checkout')\n"
-    "- Each feature should have a meaningful name and a detailed summary describing what it does\n"
-    "- Break down features into sub-features (e.g., 'User Login' → 'Email/Password Login', 'Social Login')\n"
+    "- Each module should have a meaningful name and a detailed summary describing what it does\n"
+    "- Break down modules into features and sub-features(e.g., 'User Login' → 'Email/Password Login', 'Social Login')\n"
     "- Extract acceptance criteria from the document text\n"
     "- Set priority (P1, P2, P3) based on document language (must/critical = P1, should/nice-to-have = P2, future = P3)\n\n"
-    "HOURS ESTIMATION GUIDELINES:\n"
-    "For each sub-feature, estimate hours considering a mid-level developer with 3 years of experience:\n"
-    "- Low Complexity: 4-8 hours total (Development: 3-5h, Testing: 1-2h, Code Review: 0.5h, Documentation: 0.5h)\n"
-    "  Examples: Simple CRUD operations, basic forms, read-only views, simple data display\n"
-    "- Medium Complexity: 8-16 hours total (Development: 6-10h, Testing: 2-3h, Code Review: 1h, Documentation: 1h)\n"
-    "  Examples: Complex business logic, API integrations, moderate UI complexity, data validation\n"
-    "- High Complexity: 16-32 hours total (Development: 12-20h, Testing: 4-6h, Code Review: 2h, Documentation: 2h)\n"
-    "  Examples: Complex algorithms, multiple integrations, advanced UI/UX, performance optimization, real-time features\n"
-    "\n"
-    "Consider these factors when estimating:\n"
-    "- External integrations add 30% to development time\n"
-    "- UI components add 20% to development time and 30% to testing time\n"
-    "- Real-time features, complex algorithms, or performance-critical code increase complexity\n"
-    "- Always include time for testing, code review, and documentation\n"
-    "\n"
+    "When suggesting modules:\n"
+    "- Analyze the document type and business model to suggest relevant modules that are commonly needed\n"
+    "- For SaaS products: suggest Subscription Management, Payment Gateway Integration, Billing & Invoicing\n"
+    "- For e-commerce: suggest Shopping Cart, Checkout, Order Management, Inventory Management\n"
+    "- For mobile apps: suggest Push Notifications, Offline Sync, App Store Integration\n"
+    "- For platforms with users: suggest User Management, Role-Based Access Control, Analytics Dashboard\n"
+    "- Only suggest modules that are NOT already explicitly mentioned in the document\n"
+    "- Provide clear reasoning for why each module is suggested\n"
+    "- Suggested modules should complement the extracted modules, not duplicate them\n\n"
     "Return strictly valid JSON with the exact shape below. Do not include commentary, markdown code fences, or explanations.\n\n"
     "Expected JSON shape:\n"
     "{\n"
+    '  "document_title": "string - the main title/header of the document (extract from document header, title page, or first major heading)",\n'
     '  "executive_summary": {\n'
     '    "overview": "string - 2-3 sentence summary of the product/app",\n'
     '    "key_points": ["string"] - array of 5-10 key features/capabilities\n'
@@ -88,33 +82,15 @@ _SYSTEM_PROMPT = (
     "    {\n"
     '      "name": "string - module name (e.g., Customer Profile, Menu & Ordering)",\n'
     '      "description": "string - brief description of what this module does",\n'
-    '      "features": [\n'
-    "        {\n"
-    '          "name": "string - feature name",\n'
-    '          "description": "string - feature description",\n'
-    '          "subFeatures": [\n'
-    "            {\n"
-    '              "name": "string - sub-feature name",\n'
-    '              "description": "string - detailed description",\n'
-    '              "complexity": "Low" | "Medium" | "High",\n'
-    '              "estimatedHours": number - total hours (4-8 for Low, 8-16 for Medium, 16-32 for High),\n'
-    '              "hoursBreakdown": {\n'
-    '                "development": number,\n'
-    '                "testing": number,\n'
-    '                "codeReview": number,\n'
-    '                "documentation": number,\n'
-    '                "total": number,\n'
-    '                "confidence": number (0-1)\n'
-    "              },\n"
-    '              "assumptions": ["string"] - assumptions for this estimate,\n'
-    '              "dependencies": ["string"] - other sub-features this depends on\n'
-    "            }\n"
-    "          ],\n"
-    '          "totalHours": number - sum of all sub-feature hours,\n'
-    '          "priority": "P1" | "P2" | "P3"\n'
-    "        }\n"
-    "      ],\n"
-    '      "totalHours": number - sum of all feature hours\n'
+    '      "features": ["string"] - array of feature names (references to features array below)\n'
+    "    }\n"
+    "  ],\n"
+    '  "suggested_modules": [\n'
+    "    {\n"
+    '      "name": "string - suggested module name (e.g., Subscription Management, Payment Gateway)",\n'
+    '      "description": "string - brief description of why this module is suggested and what it would do",\n'
+    '      "reason": "string - reason for suggestion (e.g., SaaS product typically requires subscription management)",\n'
+    '      "features": ["string"] - array of suggested feature names for this module\n'
     "    }\n"
     "  ],\n"
     '  "features": [\n'
@@ -145,22 +121,15 @@ _SYSTEM_PROMPT = (
     "    {\n"
     '      "question": "string - question that needs clarification"\n'
     "    }\n"
-    "  ],\n"
-    '  "totalProjectHours": number - sum of all module hours,\n'
-    '  "estimatedTimelineWeeks": number - estimated weeks based on team size (optional),\n'
-    '  "teamSizeRecommendation": number - recommended team size (optional)\n'
+    "  ]\n"
     "}\n\n"
     "IMPORTANT:\n"
     "- Extract information accurately from the document - do not make up details\n"
     "- Use the document's own language and terminology when possible\n"
     "- Group related features into logical modules\n"
-    "- Break down features into sub-features for accurate hours estimation\n"
-    "- Estimate hours realistically based on complexity - use market standards\n"
-    "- Include hours breakdown (development, testing, code review, documentation) for each sub-feature\n"
-    "- Set confidence scores (0.5-1.0) based on how clear the requirements are\n"
+    "- Ensure feature names in modules.\n"
     "- Be thorough but concise - extract all relevant information\n"
-    "- All arrays can be empty if no information is found in the document\n"
-    "- Calculate totalProjectHours as sum of all module totalHours"
+    "- All arrays can be empty if no information is found in the document"
 )
 
 _USER_TEMPLATE = (
@@ -169,6 +138,7 @@ _USER_TEMPLATE = (
     "- Executive summary with overview and key points\n"
     "- User personas with their goals and pain points\n"
     "- Modules grouping related functionality\n"
+    "- Suggested modules that would be beneficial based on the product type/business model\n"
     "- Detailed features with summaries, priorities, and acceptance criteria\n"
     "- Functional, technical, and non-functional requirements\n"
     "- Any open questions that need clarification\n\n"
@@ -358,10 +328,21 @@ class LLMDocumentScopeGenerator:
         else:  # groq
             model = self._settings.groq_model
         
+        # Adjust max_tokens based on model capabilities
+        # gpt-4-turbo supports up to 4096 completion tokens
+        # gpt-4o and gpt-4o-mini support higher limits
+        # For large documents, we need more tokens for complete JSON response
+        if "gpt-4-turbo" in model.lower():
+            max_tokens = 4096  # gpt-4-turbo supports 4096 completion tokens
+        elif "gpt-4o" in model.lower() or "gpt-4o-mini" in model.lower():
+            max_tokens = 8000  # gpt-4o supports higher limits - increase for large JSON responses
+        else:
+            max_tokens = 4096  # Default to safe limit (for gpt-4-turbo)
+        
         return {
             "model": model,
             "temperature": 0.1,  # Lower temperature for more consistent, accurate extraction
-            "max_tokens": 6000,  # Increased for more detailed scope documents
+            "max_tokens": max_tokens,
             "messages": [
                 {"role": "system", "content": _SYSTEM_PROMPT},
                 {"role": "user", "content": user_content},
@@ -634,6 +615,18 @@ class LLMDocumentScopeGenerator:
         
         # Fix missing commas between array elements
         fixed = re.sub(r'\]\s*(\[|"[^"]+"|\{)', r'], \1', fixed)
+        
+        # Fix incomplete JSON by trying to close unclosed structures
+        # Count braces and brackets to see if JSON is incomplete
+        open_braces = fixed.count('{') - fixed.count('}')
+        open_brackets = fixed.count('[') - fixed.count(']')
+        
+        # If JSON appears incomplete, try to close it
+        if open_braces > 0 or open_brackets > 0:
+            logger.warning(f"JSON appears incomplete: {open_braces} unclosed braces, {open_brackets} unclosed brackets")
+            # Try to close arrays first, then objects
+            fixed += ']' * open_brackets
+            fixed += '}' * open_braces
         
         return fixed
 

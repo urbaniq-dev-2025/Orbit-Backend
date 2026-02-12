@@ -1,0 +1,539 @@
+{
+	"info": {
+		"_postman_id": "orbit-backend-api-collection",
+		"name": "Orbit Backend API - QA Testing",
+		"description": "Complete API collection for Orbit Backend testing. Includes all endpoints organized by feature area.\n\n**Base URL:** `http://localhost:8001/api`\n\n**Setup Instructions:**\n1. Import this collection\n2. Create/import environment with `base_url` variable\n3. Start with 'Sign In' request to get access token\n4. All other requests will use the token automatically",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{access_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "01 - Authentication",
+			"item": [
+				{
+					"name": "Sign Up",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set(\"access_token\", jsonData.access_token);",
+									"    pm.environment.set(\"refresh_token\", jsonData.refresh_token);",
+									"    pm.environment.set(\"user_id\", jsonData.user?.id || \"\");",
+									"}",
+									"",
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"qa.test@example.com\",\n  \"password\": \"TestPassword123!\",\n  \"full_name\": \"QA Tester\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/signup",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"signup"
+							]
+						},
+						"description": "Register a new user account"
+					}
+				},
+				{
+					"name": "Sign In ⭐ (Start Here)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set(\"access_token\", jsonData.access_token);",
+									"    pm.environment.set(\"refresh_token\", jsonData.refresh_token);",
+									"    pm.environment.set(\"user_id\", jsonData.user?.id || \"\");",
+									"    ",
+									"    pm.test(\"Status code is 200\", function () {",
+									"        pm.response.to.have.status(200);",
+									"    });",
+									"    ",
+									"    pm.test(\"Response has access token\", function () {",
+									"        pm.expect(jsonData).to.have.property('access_token');",
+									"    });",
+									"    ",
+									"    pm.test(\"Response has refresh token\", function () {",
+									"        pm.expect(jsonData).to.have.property('refresh_token');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"qa.test@example.com\",\n  \"password\": \"TestPassword123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/signin",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"signin"
+							]
+						},
+						"description": "Login with email and password. This will automatically save the access_token and refresh_token to environment variables."
+					}
+				},
+				{
+					"name": "Get Current User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has user data\", function () {",
+									"    const jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('id');",
+									"    pm.expect(jsonData).to.have.property('email');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						},
+						"description": "Get current authenticated user information"
+					}
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set(\"access_token\", jsonData.access_token);",
+									"    pm.environment.set(\"refresh_token\", jsonData.refresh_token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/refresh",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"refresh"
+							]
+						},
+						"description": "Refresh access token using refresh token"
+					}
+				},
+				{
+					"name": "Sign Out",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/signout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"signout"
+							]
+						}
+					}
+				}
+			],
+			"description": "Authentication endpoints for user registration, login, and token management"
+		},
+		{
+			"name": "02 - Health Checks",
+			"item": [
+				{
+					"name": "Health Check - Live",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health/live",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health",
+								"live"
+							]
+						},
+						"description": "Liveness check for container orchestration"
+					}
+				},
+				{
+					"name": "Health Check - Ready",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health/ready",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health",
+								"ready"
+							]
+						},
+						"description": "Readiness check for container orchestration"
+					}
+				}
+			]
+		},
+		{
+			"name": "03 - Workspaces",
+			"item": [
+				{
+					"name": "List Workspaces",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/workspaces",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"workspaces"
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Workspace",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set(\"workspace_id\", jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Test Workspace\",\n  \"description\": \"QA Testing Workspace\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/workspaces",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"workspaces"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Workspace",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/workspaces/{{workspace_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"workspaces",
+								"{{workspace_id}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "04 - Clients",
+			"item": [
+				{
+					"name": "List Clients",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/clients?page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"clients"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Client",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const jsonData = pm.response.json();",
+									"    pm.environment.set(\"client_id\", jsonData.id);",
+									"}",
+									"",
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Test Client\",\n  \"email\": \"client@example.com\",\n  \"phone\": \"+1234567890\",\n  \"address\": \"123 Test St\",\n  \"city\": \"Test City\",\n  \"country\": \"USA\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/clients",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"clients"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Client",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/clients/{{client_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"clients",
+								"{{client_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Client Stats",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/clients/stats",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"clients",
+								"stats"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "05 - Dashboard",
+			"item": [
+				{
+					"name": "Get Dashboard Stats",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dashboard/stats",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"stats"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Pipeline Data",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/dashboard/pipeline",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"dashboard",
+								"pipeline"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "06 - AI Chat",
+			"item": [
+				{
+					"name": "AI Chat",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"message\": \"Hello, how can you help me?\",\n  \"conversation_id\": null\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/ai/chat",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"ai",
+								"chat"
+							]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8001/api",
+			"type": "string"
+		}
+	]
+}

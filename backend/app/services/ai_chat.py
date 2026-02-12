@@ -44,7 +44,7 @@ Response Format (JSON):
       "priority": "none|low|medium|high",
       "category": "string",
       "route": "string (for navigation)",
-      "reminderTime": "ISO datetime string (for reminders)"
+      "date": "ISO date string (YYYY-MM-DD) - for reminders",`n      "time": "Time string (HH:MM format) - for reminders",`n      "type": "event|deadline - for reminders"
     }
   },
   "actions": [
@@ -74,7 +74,7 @@ Navigation Examples:
 
 Task Creation Examples:
 - "Create a task to review Q1 budget by Friday" → create_task with title="Review Q1 budget", dueDate="Friday date"
-- "Remind me to call Acme Corp tomorrow at 2pm" → create_reminder with title="Call Acme Corp", reminderTime="tomorrow 2pm"
+- "Remind me to call Acme Corp tomorrow at 2pm" → create_reminder with title="Call Acme Corp", date="tomorrow date (YYYY-MM-DD)", time="14:00", type="event"
 - "Add a task: Finalize design system (high priority)" → create_task with title="Finalize design system", priority="high"
 
 Be helpful, concise, and action-oriented. Always provide actionable suggestions when appropriate."""
@@ -155,10 +155,75 @@ class AIChatService:
             parsed.get("actions"),
         )
 
+        # Ensure intent has required fields
+        intent_data = parsed.get("intent", {})
+        if not isinstance(intent_data, dict):
+            intent_data = {"type": "query", "confidence": 0.5, "entities": {}}
+        
+        # Ensure required intent fields exist
+        if "type" not in intent_data:
+            intent_data["type"] = "query"
+        if "confidence" not in intent_data:
+            intent_data["confidence"] = 0.5
+        if "entities" not in intent_data:
+            intent_data["entities"] = {}
+        
+        # Execute actions automatically for create_reminder and create_task
+        executed_actions = []
+        created_entity_id = None
+        
+        if intent_data.get("type") == "create_reminder" and workspace_id:
+            try:
+                created_entity_id = await self._execute_create_reminder(
+                    session, user_id, workspace_id, intent_data.get("entities", {})
+                )
+                logger.info(f"Created reminder {created_entity_id} from chatbot")
+            except Exception as exc:
+                logger.error(f"Failed to create reminder from chatbot: {exc}", exc_info=True)
+                # Don't fail the whole request, just log the error
+        
+        # Ensure actions is a list
+        actions_list = parsed.get("actions", [])
+        if not isinstance(actions_list, list):
+            actions_list = []
+        
+        
+        # Post-process actions to fix reminder payloads - convert reminderTime to date/time
+        for action in actions_list:
+            if action.get("type") == "create_reminder" and action.get("data"):
+                action_data = action["data"]
+                # Convert reminderTime to date and time if present
+                if "reminderTime" in action_data:
+                    reminder_time_str = action_data.pop("reminderTime")
+                    try:
+                        from datetime import datetime
+                        dt = datetime.fromisoformat(reminder_time_str.replace("Z", "+00:00"))
+                        action_data["date"] = dt.strftime("%Y-%m-%d")
+                        action_data["time"] = dt.strftime("%H:%M")
+                        logger.info(f"Converted reminderTime to date/time: date={action_data['date']}, time={action_data['time']}")
+                    except Exception as e:
+                        logger.warning(f"Failed to convert reminderTime: {e}")
+                        from datetime import date
+                        action_data["date"] = date.today().strftime("%Y-%m-%d")
+                        action_data["time"] = None
+                # Ensure required fields are present
+                if "date" not in action_data:
+                    from datetime import date
+                    action_data["date"] = date.today().strftime("%Y-%m-%d")
+                if "type" not in action_data:
+                    action_data["type"] = "event"
+                # Ensure workspaceId is present
+                if "workspaceId" not in action_data and workspace_id:
+                    action_data["workspaceId"] = str(workspace_id)
+        # Update response if entity was created
+        response_text = parsed.get("response", "I understand. How can I help you?")
+        if created_entity_id and intent_data.get("type") == "create_reminder":
+            response_text = f"{response_text}\n\n✅ Reminder created successfully!"
+        
         return ChatResponse(
-            response=parsed["response"],
-            intent=IntentInfo(**parsed["intent"]),
-            actions=[ActionData(**action) for action in parsed.get("actions", [])],
+            response=response_text,
+            intent=IntentInfo(**intent_data),
+            actions=[ActionData(**action) for action in actions_list],
             conversation_id=conversation_id,
             suggestions=parsed.get("suggestions"),
         )
@@ -171,7 +236,24 @@ class AIChatService:
         context: Dict[str, Any],
     ) -> str:
         """Build the system prompt with workspace context."""
+        from datetime import datetime
+        
         prompt_parts = [SYSTEM_PROMPT]
+
+        # Add current date and time - CRITICAL for date parsing
+        from datetime import timedelta
+        now = datetime.now()
+        current_date_iso = now.strftime("%Y-%m-%d")
+        current_datetime_iso = now.isoformat()
+        tomorrow = (now + timedelta(days=1)).strftime("%Y-%m-%d")
+        prompt_parts.append(f"\n\nIMPORTANT - Current Date and Time:")
+        prompt_parts.append(f"- Today's date: {current_date_iso}")
+        prompt_parts.append(f"- Current datetime: {current_datetime_iso}")
+        prompt_parts.append(f"- When user says 'today', use: {current_date_iso}")
+        prompt_parts.append(f"- When user says 'tomorrow', use: {tomorrow}")
+        prompt_parts.append(f"- Always use dates >= {current_date_iso}. Never use dates from the past.")
+        prompt_parts.append(f"- For reminders, use separate 'date' (YYYY-MM-DD) and 'time' (HH:MM) fields")
+        prompt_parts.append(f"- NEVER use 'reminderTime' - it does not exist in the API schema")
 
         # Add workspace context
         if workspace_context:
@@ -265,6 +347,86 @@ class AIChatService:
         )
         session.add(conversation_msg)
         await session.commit()
+
+    async def _execute_create_reminder(
+        self,
+        session: AsyncSession,
+        user_id: UUID,
+        workspace_id: UUID,
+        entities: Dict[str, Any],
+    ) -> Optional[UUID]:
+        """Execute create_reminder action from chatbot intent."""
+        from datetime import date, datetime
+        from app.services import reminders as reminder_service
+        
+        # Extract title
+        title = entities.get("title") or entities.get("reminderTitle")
+        if not title:
+            raise ValueError("Title is required for reminder")
+        
+        # Extract date - try multiple formats
+        reminder_date = None
+        date_str = entities.get("dueDate") or entities.get("date") or entities.get("reminderDate")
+        if date_str:
+            try:
+                # Try parsing ISO date string (YYYY-MM-DD)
+                if isinstance(date_str, str) and len(date_str) >= 10:
+                    reminder_date = datetime.fromisoformat(date_str[:10]).date()
+                elif isinstance(date_str, date):
+                    reminder_date = date_str
+            except (ValueError, AttributeError):
+                # If parsing fails, use today as default
+                reminder_date = date.today()
+        
+        if not reminder_date:
+            # Default to today if no date provided
+            reminder_date = date.today()
+        
+        # Extract time
+        time_str = None
+        reminder_time_str = entities.get("reminderTime") or entities.get("time")
+        if reminder_time_str:
+            # Parse ISO datetime or time string
+            if isinstance(reminder_time_str, str):
+                # Try to extract time from ISO datetime string
+                if "T" in reminder_time_str:
+                    try:
+                        dt = datetime.fromisoformat(reminder_time_str.replace("Z", "+00:00"))
+                        time_str = dt.strftime("%H:%M")
+                    except (ValueError, AttributeError):
+                        # If it's already HH:MM format, use it directly
+                        if ":" in reminder_time_str and len(reminder_time_str) <= 5:
+                            time_str = reminder_time_str
+                elif ":" in reminder_time_str and len(reminder_time_str) <= 5:
+                    time_str = reminder_time_str
+        
+        # Determine reminder type (default to "event")
+        reminder_type = entities.get("type") or "event"
+        if reminder_type not in ["deadline", "event"]:
+            reminder_type = "event"
+        
+        # Extract optional project_id
+        project_id = None
+        if entities.get("projectId"):
+            try:
+                project_id = UUID(entities["projectId"])
+            except (ValueError, TypeError):
+                pass
+        
+        # Create the reminder
+        reminder = await reminder_service.create_reminder(
+            session=session,
+            user_id=user_id,
+            workspace_id=workspace_id,
+            title=title,
+            reminder_date=reminder_date,
+            reminder_type=reminder_type,
+            reminder_time=time_str,
+            project_id=project_id,
+            scope_id=None,  # Can be added later if needed
+        )
+        
+        return reminder.id
 
 
 async def _get_workspace_context(session: AsyncSession, workspace_id: UUID) -> Dict[str, Any]:

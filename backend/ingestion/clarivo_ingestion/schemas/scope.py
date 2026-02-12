@@ -63,6 +63,7 @@ class ScopePreviewRequest(BaseModel):
 
 
 class ScopeDocument(BaseModel):
+    document_title: str = Field(default="", description="The main title/header extracted from the document")
     executive_summary: ExecutiveSummary = Field(default_factory=ExecutiveSummary)
     personas: list[Persona] = Field(default_factory=list)
     modules: list[Module] = Field(default_factory=list)

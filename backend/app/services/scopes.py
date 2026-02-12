@@ -147,10 +147,18 @@ async def get_scope(
     session: AsyncSession, scope_id: uuid.UUID, user_id: uuid.UUID, *, include_sections: bool = True
 ) -> Scope:
     """Get a scope by ID with access check."""
+    from sqlalchemy.orm import selectinload
+    from app.models import Project, Client
+    
     stmt: Select[Scope] = select(Scope).where(Scope.id == scope_id)
 
     if include_sections:
         stmt = stmt.options(selectinload(Scope.sections))
+    
+    # Eagerly load project and client relationships to avoid lazy loading issues
+    stmt = stmt.options(
+        selectinload(Scope.project).selectinload(Project.client)
+    )
 
     result = await session.execute(stmt)
     scope = result.scalar_one_or_none()
@@ -520,31 +528,46 @@ async def export_scope(
     template: str = "standard",
 ) -> dict:
     """
-    Export scope to PDF or DOCX format.
-    Returns download URL and expiration time.
-    Note: File storage infrastructure needs to be configured.
+    Export scope to PDF, DOCX, or print format.
+    Returns download URL and expiration time for file exports, or print data for print format.
     """
-    scope = await get_scope(session, scope_id, user_id, include_sections=include_sections)
+    from datetime import datetime, timedelta, timezone
+    from app.services import scope_export
 
-    # TODO: Implement actual export generation
-    # For now, return placeholder response
-    # This should:
-    # 1. Generate PDF/DOCX from scope data
-    # 2. Upload to file storage (S3, local, etc.)
-    # 3. Generate signed download URL
-    # 4. Return URL with expiration
-
-    from datetime import datetime, timedelta
-
-    # Placeholder: Generate file path
-    file_extension = "pdf" if format == "pdf" else "docx"
-    # In production, this would be: f"https://storage.example.com/exports/{scope_id}.{file_extension}"
-    download_url = f"/api/scopes/{scope_id}/exports/{scope_id}.{file_extension}"
-
-    return {
-        "download_url": download_url,
-        "expires_at": (datetime.utcnow() + timedelta(days=7)).isoformat() + "Z",
-    }
+    if format == "print":
+        # Return print-optimized data
+        print_data = await scope_export.get_scope_for_print(
+            session, scope_id, user_id, include_sections=include_sections
+        )
+        return {
+            "print_data": print_data,
+            "download_url": None,
+            "expires_at": None,
+        }
+    elif format == "pdf":
+        # Generate PDF
+        pdf_bytes, filename = await scope_export.export_scope_to_pdf(
+            session, scope_id, user_id, include_sections=include_sections, template=template
+        )
+        download_path = await scope_export.save_export_file(scope_id, filename, pdf_bytes)
+        return {
+            "download_url": download_path,
+            "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+            "print_data": None,
+        }
+    elif format == "docx":
+        # Generate DOCX
+        docx_bytes, filename = await scope_export.export_scope_to_docx(
+            session, scope_id, user_id, include_sections=include_sections, template=template
+        )
+        download_path = await scope_export.save_export_file(scope_id, filename, docx_bytes)
+        return {
+            "download_url": download_path,
+            "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+            "print_data": None,
+        }
+    else:
+        raise ValueError(f"Unsupported export format: {format}")
 
 
 async def upload_scope_document(
@@ -728,6 +751,14 @@ async def extract_scope_from_document(
                     import json
                     scope.scope_document_json = json.dumps(scope_document_json, indent=2)
                     logger.info(f"Saved scope document JSON for scope {scope_id}")
+                    
+                    # Extract and update scope title from document_title if available
+                    document_title = scope_document_json.get("document_title") or scope_document_json.get("documentTitle")
+                    if document_title and document_title.strip():
+                        # Only update if current title is empty or default
+                        if not scope.title or scope.title.strip() == "" or scope.title.lower() in ["untitled scope", "untitled", "new scope"]:
+                            scope.title = document_title.strip()
+                            logger.info(f"Updated scope title from document: {document_title}")
                 
                 # Update scope metadata
                 scope.confidence_score = result.get("confidence_score", 0)

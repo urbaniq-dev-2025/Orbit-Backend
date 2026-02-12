@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from . import activity, admin, ai, auth, clients, credits, dashboard, health, notifications, onboarding, projects, proposals, quotations, scopes, settings, subscription, tasks, templates, user_resources, workspaces
+from . import activity, admin, ai, auth, clients, credits, dashboard, health, notifications, onboarding, projects, proposals, quotations, reminders, scopes, settings, subscription, tasks, templates, user_resources, workspaces
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -12,6 +12,7 @@ api_router.include_router(projects.router, prefix="/projects", tags=["projects"]
 api_router.include_router(scopes.router, prefix="/scopes", tags=["scopes"])
 api_router.include_router(quotations.router, prefix="/quotations", tags=["quotations"])
 api_router.include_router(proposals.router, prefix="/proposals", tags=["proposals"])
+api_router.include_router(reminders.router, prefix="/reminders", tags=["reminders"])
 api_router.include_router(activity.router, prefix="/activity", tags=["activity"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(templates.router, prefix="/templates", tags=["templates"])
