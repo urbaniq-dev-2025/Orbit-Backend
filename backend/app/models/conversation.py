@@ -26,7 +26,7 @@ class ConversationHistory(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    conversation_id: Mapped[uuid.UUID] = mapped_column(GUID(), nullable=False, index=True)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(GUID(), nullable=False)
     role: Mapped[str] = mapped_column(String(20), nullable=False)  # 'user' or 'assistant'
     message: Mapped[str] = mapped_column(Text, nullable=False)
     intent_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)

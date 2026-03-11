@@ -5,10 +5,17 @@ from functools import lru_cache
 from typing import List, Optional, Union
 
 from pydantic import AnyHttpUrl, Field, validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
     app_name: str = "Orbit Backend"
     environment: str = Field("development", env="ENVIRONMENT")
     database_url: str = Field(..., env="DATABASE_URL")
@@ -47,11 +54,6 @@ class Settings(BaseSettings):
     
     # File upload configuration
     upload_dir: str = Field("uploads", env="UPLOAD_DIR")
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
 
     @validator('cors_origins', pre=True)
     def parse_cors_origins(cls, v):

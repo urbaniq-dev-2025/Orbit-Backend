@@ -280,7 +280,8 @@ async def verify_password_reset_code(
         ) from exc
 
     token = password_reset_service.build_reset_token(reset)
-    return PasswordResetVerifyResponse(reset_token=token)
+    # Use alias name to satisfy Pydantic v2's default alias handling
+    return PasswordResetVerifyResponse(resetToken=token)
 
 
 @router.post("/password/reset", status_code=status.HTTP_204_NO_CONTENT)
