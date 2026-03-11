@@ -25,11 +25,10 @@ jobs:
           python -m pip install -r backend/requirements-dev.txt
           python -m pip install -r backend/ingestion/requirements-dev.txt
 
-      # Linting disabled per project preference. You can still run Ruff locally with:
+      # Linting and autoformat checks disabled per project preference.
+      # You can still run them locally if desired:
       #   ruff check backend/app
-
-      - name: Format check (black)
-        run: black --check backend/app backend/ingestion
+      #   black backend/app backend/ingestion
 
       - name: Run tests
         run: pytest backend/tests backend/ingestion/tests
