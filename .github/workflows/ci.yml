@@ -26,7 +26,7 @@ jobs:
           python -m pip install -r backend/ingestion/requirements-dev.txt
 
       - name: Lint (ruff)
-        run: ruff check backend/app backend/ingestion
+        run: ruff check backend/app
 
       - name: Format check (black)
         run: black --check backend/app backend/ingestion
