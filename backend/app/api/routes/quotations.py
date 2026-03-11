@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
@@ -13,7 +12,6 @@ from app.schemas.quotation import (
     QuotationItemPublic,
     QuotationItemUpdate,
     QuotationReorderRequest,
-    QuotationStatus,
     QuotationSummary,
     QuotationUpdate,
 )
@@ -141,12 +139,12 @@ async def delete_quotation(
 # Quotation Items Endpoints
 
 
-@router.get("/{quotation_id}/items", response_model=List[QuotationItemPublic])
+@router.get("/{quotation_id}/items", response_model=list[QuotationItemPublic])
 async def list_quotation_items(
     quotation_id: uuid.UUID,
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-) -> List[QuotationItemPublic]:
+) -> list[QuotationItemPublic]:
     """List all items for a quotation."""
     try:
         items = await quotation_service.list_quotation_items(session, quotation_id, current_user.id)

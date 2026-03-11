@@ -73,8 +73,9 @@ async def signin(payload: LoginRequest, session: deps.SessionDep) -> Token:
 
 @router.post("/refresh", response_model=Token)
 async def refresh_token(refresh_token: str, session: deps.SessionDep) -> Token:
-    from app.core.security import decode_token  # local import avoids cycle
     import uuid
+
+    from app.core.security import decode_token  # local import avoids cycle
 
     payload = decode_token(refresh_token)
     if payload.get("type") != "refresh" or payload.get("sub") is None:

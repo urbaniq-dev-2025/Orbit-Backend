@@ -9,27 +9,21 @@ import uuid
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
-from sqlalchemy import select, desc, func
+from sqlalchemy import desc, func, select
 
 from app.api import deps
 from app.core.config import get_settings
 from app.core.logging import get_logger
-from app.models import User, TeamMember
+from app.models import TeamMember, User
 from app.schemas.settings import (
-    AccountDeletionRequest,
-    AccountDeletionResponse,
     AvatarUploadResponse,
     BillingHistoryItem,
     BillingHistoryResponse,
-    DataExportInclude,
     DataExportListResponse,
     DataExportRequest,
     DataExportResponse,
     DataExportStatusResponse,
-    EmailVerificationRequest,
-    EmailVerificationResponse,
     EmailVerificationSendResponse,
-    LoginActivityItem,
     NotificationPreferenceItem,
     NotificationPreferencesResponse,
     NotificationPreferencesUpdateRequest,
@@ -75,14 +69,14 @@ async def upload_avatar(
         await session.refresh(current_user)
         
         return AvatarUploadResponse(avatar_url=avatar_url, message="Avatar uploaded successfully")
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        logger.error(f"Failed to upload avatar: {e}", exc_info=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.error(f"Failed to upload avatar: {exc}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to upload avatar",
-        ) from e
+        ) from exc
 
 
 # Password Change
@@ -112,21 +106,21 @@ async def change_password(
             message="Password changed successfully",
             last_password_change=current_user.last_password_change or current_user.updated_at,
         )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        logger.error(f"Failed to change password: {e}", exc_info=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.error(f"Failed to change password: {exc}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to change password",
-        ) from e
+        ) from exc
 
 
 # Notification Preferences
 @router.get("/notifications/preferences", response_model=NotificationPreferencesResponse)
 async def get_notification_preferences(
     session: deps.SessionDep,
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
     current_user: User = Depends(deps.get_current_user),
 ) -> NotificationPreferencesResponse:
     """Get notification preferences for current user."""

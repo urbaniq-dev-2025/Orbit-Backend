@@ -4,9 +4,8 @@ API routes for reminder management.
 
 from __future__ import annotations
 
-import uuid
 from datetime import date
-from typing import Optional
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -101,11 +100,15 @@ async def create_reminder(
 async def list_reminders(
     session: deps.SessionDep,
     current_user: User = Depends(deps.get_current_user),
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
-    start_date: Optional[date] = Query(None, alias="startDate"),
-    end_date: Optional[date] = Query(None, alias="endDate"),
-    reminder_type: Optional[str] = Query(None, alias="type", description="Filter by type: 'deadline' or 'event'"),
-    project_id: Optional[uuid.UUID] = Query(None, alias="projectId"),
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
+    start_date: date | None = Query(None, alias="startDate"),
+    end_date: date | None = Query(None, alias="endDate"),
+    reminder_type: str | None = Query(
+        None,
+        alias="type",
+        description="Filter by type: 'deadline' or 'event'",
+    ),
+    project_id: uuid.UUID | None = Query(None, alias="projectId"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100, alias="pageSize"),
 ) -> ReminderListResponse:

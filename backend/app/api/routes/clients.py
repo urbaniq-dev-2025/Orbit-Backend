@@ -359,7 +359,7 @@ async def get_client_projects(
         projects, total = await client_service.get_client_projects(
             session, client_id, current_user.id, limit=limit
         )
-        
+
         project_items = [
             ClientProjectItem(
                 id=p.id,
@@ -370,18 +370,18 @@ async def get_client_projects(
             )
             for p in projects
         ]
-        
+
         return ClientProjectsResponse(projects=project_items, total=total)
-    except client_service.ClientNotFoundError:
+    except client_service.ClientNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Client not found.",
-        )
-    except client_service.ClientAccessError:
+        ) from exc
+    except client_service.ClientAccessError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied.",
-        )
+        ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -401,11 +401,15 @@ async def get_client_scopes(
         scopes, total = await client_service.get_client_scopes(
             session, client_id, current_user.id, limit=limit
         )
-        
+
         scope_items = []
         for scope in scopes:
             project_name = scope.project.name if scope.project and scope.project_id else "No Project"
-            project_id = scope.project_id if scope.project_id else uuid.UUID("00000000-0000-0000-0000-000000000000")
+            project_id = (
+                scope.project_id
+                if scope.project_id
+                else uuid.UUID("00000000-0000-0000-0000-000000000000")
+            )
             scope_items.append(
                 ClientScopeItem(
                     id=scope.id,
@@ -416,18 +420,18 @@ async def get_client_scopes(
                     updated_at=scope.updated_at,
                 )
             )
-        
+
         return ClientScopesResponse(scopes=scope_items, total=total)
-    except client_service.ClientNotFoundError:
+    except client_service.ClientNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Client not found.",
-        )
-    except client_service.ClientAccessError:
+        ) from exc
+    except client_service.ClientAccessError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied.",
-        )
+        ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
