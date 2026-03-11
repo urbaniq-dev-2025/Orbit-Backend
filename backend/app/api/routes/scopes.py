@@ -335,10 +335,10 @@ async def update_scope(
     current_user=Depends(deps.get_current_user),
 ) -> ScopeDetail:
     """Update a scope."""
-        try:
-            # Parse request body to handle status field conversion
+    try:
+        # Parse request body to handle status field conversion
         body_data = await request.json()
-        
+
         # Convert camelCase status to snake_case if needed
         if "status" in body_data and body_data["status"]:
             status_value = body_data["status"]
@@ -356,24 +356,32 @@ async def update_scope(
                 # Invalid status value
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid status value: {status_value}. Valid values are: draft, in_review, approved, rejected"
+                    detail=(
+                        "Invalid status value: "
+                        f"{status_value}. Valid values are: draft, in_review, approved, rejected"
+                    ),
                 )
-        
+
         # Convert camelCase field names to snake_case for Pydantic
         if "dueDate" in body_data:
             body_data["due_date"] = body_data.pop("dueDate")
-        
+
         # Create payload from cleaned data
         payload = ScopeUpdate(**body_data)
-        
+
         scope = await scope_service.update_scope(session, scope_id, current_user.id, payload)
-        
+
         # Reload scope with sections eagerly loaded to avoid MissingGreenlet error
-        scope = await scope_service.get_scope(session, scope_id, current_user.id, include_sections=True)
-        
+        scope = await scope_service.get_scope(
+            session,
+            scope_id,
+            current_user.id,
+            include_sections=True,
+        )
+
         return await _build_scope_detail(session, scope, current_user.id)
-        except HTTPException:
-            raise
+    except HTTPException:
+        raise
     except Exception as exc:
         # Log the actual exception for debugging
         from app.core.logging import get_logger
