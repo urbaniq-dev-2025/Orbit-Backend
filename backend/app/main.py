@@ -58,12 +58,15 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
             "error_type": type(exc).__name__,
         },
     )
+    content = {
+        "detail": "An internal server error occurred. Please try again later.",
+        "error_type": type(exc).__name__,
+    }
+    if settings.environment == "development":
+        content["error_message"] = str(exc)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "detail": "An internal server error occurred. Please try again later.",
-            "error_type": type(exc).__name__,
-        },
+        content=content,
     )
 
 
