@@ -26,7 +26,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def _build_token(data: Dict[str, Any], expires_delta: dt.timedelta) -> str:
     to_encode = data.copy()
     expire = dt.datetime.utcnow() + expires_delta
-    to_encode.update({"exp": expire})
+    # JWT exp must be numeric (Unix timestamp) for JSON serialization
+    to_encode["exp"] = int(expire.timestamp())
     return jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 

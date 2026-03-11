@@ -68,7 +68,8 @@ async def signin(payload: LoginRequest, session: deps.SessionDep) -> Token:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid credentials")
     access = create_access_token(str(user.id))
     refresh = create_refresh_token(str(user.id))
-    return Token(access_token=access, refresh_token=refresh, role=user.role)
+    role = user.role if user.role else "user"
+    return Token(access_token=access, refresh_token=refresh, role=role)
 
 
 @router.post("/refresh", response_model=Token)
