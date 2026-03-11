@@ -28,7 +28,7 @@ target-version = ["py311"]
 [tool.pytest.ini_options]
 minversion = "8.0"
 addopts = "-ra"
-testpaths = ["backend/ingestion/tests"]
+testpaths = ["backend/tests"]
 
 [tool.mypy]
 python_version = "3.11"

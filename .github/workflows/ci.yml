@@ -31,5 +31,5 @@ jobs:
       #   black backend/app backend/ingestion
 
       - name: Run tests
-        run: pytest backend/tests backend/ingestion/tests
+        run: pytest
 

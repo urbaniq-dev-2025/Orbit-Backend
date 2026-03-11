@@ -3,9 +3,19 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+    status,
+)
 from sqlalchemy import func, select
 
 from app.api import deps
@@ -1001,42 +1011,42 @@ async def _build_scope_detail(session, scope: Scope, user_id: uuid.UUID) -> Scop
         'isFavourite': is_favourite,
     }
     
-    # Add project and client info - now loaded eagerly in get_scope()
+    # Add project and client info - prefer eagerly loaded relationships, with a safe fallback
     project_name = None
     client_id = None
     client_name = None
-    
-    if scope.project_id:
-        # Project is now eagerly loaded via selectinload, safe to access
-        try:
-            # Access project - it should be loaded eagerly
-            project = scope.project
-            if project:
-                project_name = project.name
-                # Client is also loaded eagerly via nested selectinload
-                if project.client:
-                    client_id = project.client.id
-                    client_name = project.client.name
-                elif project.client_id:
-                    # Client ID exists but not loaded, fetch it
-                    from app.models import Client
-                    client_stmt = select(Client).where(Client.id == project.client_id)
-                    client_result = await session.execute(client_stmt)
-                    client = client_result.scalar_one_or_none()
-                    if client:
-                        client_id = client.id
-                        client_name = client.name
-            except Exception as exc:
-                # If eager loading didn't work, fetch project separately
-                from app.core.logging import get_logger
-                from app.models import Client, Project
 
-                logger = get_logger(__name__)
-                logger.warning(
-                    "Failed to access project eagerly for scope %s: %s",
-                    scope.id,
-                    exc,
-                )
+    if scope.project_id:
+        project = None
+        try:
+            project = scope.project
+        except Exception:
+            project = None
+
+        if project and getattr(project, "name", None):
+            project_name = project.name
+            if getattr(project, "client", None):
+                client_id = project.client.id
+                client_name = project.client.name
+            elif getattr(project, "client_id", None):
+                from app.models import Client
+
+                client_stmt = select(Client).where(Client.id == project.client_id)
+                client_result = await session.execute(client_stmt)
+                client = client_result.scalar_one_or_none()
+                if client:
+                    client_id = client.id
+                    client_name = client.name
+        else:
+            from app.core.logging import get_logger
+            from app.models import Client, Project
+
+            logger = get_logger(__name__)
+            logger.warning(
+                "Project relationship not eagerly loaded for scope %s; fetching explicitly.",
+                scope.id,
+            )
+
             project_stmt = select(Project).where(Project.id == scope.project_id)
             project_result = await session.execute(project_stmt)
             project = project_result.scalar_one_or_none()
@@ -1049,12 +1059,12 @@ async def _build_scope_detail(session, scope: Scope, user_id: uuid.UUID) -> Scop
                     if client:
                         client_id = client.id
                         client_name = client.name
-    
+
     # Add project and client info to response
-    scope_detail_data['projectName'] = project_name
-    scope_detail_data['clientId'] = client_id
-    scope_detail_data['clientName'] = client_name
-    
+    scope_detail_data["projectName"] = project_name
+    scope_detail_data["clientId"] = client_id
+    scope_detail_data["clientName"] = client_name
+
     return ScopeDetail.model_validate(scope_detail_data)
 
 
