@@ -1,0 +1,35 @@
+# One-off workflow to restore orbit.dump to your Neon database.
+# GitHub's runners can reach Neon even if your local network cannot.
+#
+# Setup (one time):
+#   1. In your repo: Settings → Secrets and variables → Actions → New repository secret
+#   2. Name: NEON_DATABASE_URL
+#   3. Value: postgresql://neondb_owner:YOUR_PASSWORD@ep-fancy-hat-adl64fec-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require
+#
+# Run:
+#   Actions → "Restore orbit.dump to Neon" → Run workflow
+
+name: Restore orbit.dump to Neon
+
+on:
+  workflow_dispatch:
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Restore dump to Neon
+        env:
+          NEON_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: |
+          if [ -z "$NEON_URL" ]; then
+            echo "::error::Add repository secret NEON_DATABASE_URL (Settings → Secrets and variables → Actions)"
+            exit 1
+          fi
+          pg_restore --no-owner --no-privileges --clean --if-exists -v -d "$NEON_URL" orbit.dump
