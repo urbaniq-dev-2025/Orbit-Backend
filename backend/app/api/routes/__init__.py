@@ -1,6 +1,28 @@
 from fastapi import APIRouter
 
-from . import activity, admin, ai, auth, clients, credits, dashboard, health, notifications, onboarding, projects, proposals, quotations, reminders, scopes, settings, subscription, tasks, templates, user_resources, workspaces
+from . import (
+    activity,
+    admin,
+    ai,
+    auth,
+    clients,
+    credits,
+    dashboard,
+    health,
+    notifications,
+    onboarding,
+    projects,
+    proposals,
+    quotations,
+    reminders,
+    scopes,
+    settings,
+    subscription,
+    tasks,
+    templates,
+    user_resources,
+    workspaces,
+)
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])

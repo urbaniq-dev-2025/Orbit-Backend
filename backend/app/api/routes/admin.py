@@ -503,9 +503,9 @@ async def get_subscription_list_enhanced(
     current_user=Depends(deps.get_admin_user),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100, alias="pageSize"),
-    search: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    plan: Optional[str] = Query(None),
+    search: str | None = Query(None),
+    status: str | None = Query(None),
+    plan: str | None = Query(None),
 ) -> SubscriptionListResponse:
     """Get enhanced subscription list with filtering (admin only)."""
     try:
@@ -598,8 +598,8 @@ async def get_credit_purchases(
     current_user=Depends(deps.get_admin_user),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100, alias="pageSize"),
-    search: Optional[str] = Query(None),
-    package: Optional[str] = Query(None),
+    search: str | None = Query(None),
+    package: str | None = Query(None),
 ) -> CreditPurchasesResponse:
     """Get credit purchase history (admin only)."""
     try:
@@ -640,9 +640,9 @@ async def export_subscriptions(
     session: deps.SessionDep,
     current_user=Depends(deps.get_admin_user),
     format: str = Query("xlsx", regex="^(xlsx|csv)$"),
-    status: Optional[str] = Query(None),
-    plan: Optional[str] = Query(None),
-    search: Optional[str] = Query(None),
+    status: str | None = Query(None),
+    plan: str | None = Query(None),
+    search: str | None = Query(None),
 ) -> Response:
     """Export subscriptions to Excel or CSV format (admin only)."""
     try:
@@ -680,8 +680,8 @@ async def export_credit_purchases(
     session: deps.SessionDep,
     current_user=Depends(deps.get_admin_user),
     format: str = Query("xlsx", regex="^(xlsx|csv)$"),
-    package: Optional[str] = Query(None),
-    search: Optional[str] = Query(None),
+    package: str | None = Query(None),
+    search: str | None = Query(None),
 ) -> Response:
     """Export credit purchases to Excel or CSV format (admin only)."""
     try:

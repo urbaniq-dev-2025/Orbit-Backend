@@ -16,7 +16,7 @@ router = APIRouter()
 async def list_activities(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100, alias="pageSize"),
 ) -> ActivityListResponse:

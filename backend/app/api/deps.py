@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -35,9 +35,12 @@ async def get_current_user(
     except (JWTError, ValueError) as exc:
         logger.warning(
             "Token validation failed",
-            extra={"error": str(exc), "token_preview": token[:20] + "..." if len(token) > 20 else token},
+            extra={
+                "error": str(exc),
+                "token_preview": token[:20] + "..." if len(token) > 20 else token,
+            },
         )
-        raise credentials_error
+        raise credentials_error from exc
 
     if payload.sub is None or payload.type != "access":
         logger.warning(

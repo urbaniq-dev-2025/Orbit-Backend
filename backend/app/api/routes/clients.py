@@ -31,9 +31,12 @@ router = APIRouter()
 async def list_clients(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
-    client_status: Optional[str] = Query(None, alias="status", description="Filter by status: prospect, active, past"),
-    search: Optional[str] = Query(None, description="Search in name, industry, contact name, or email"),
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
+    client_status: str | None = Query(None, alias="status", description="Filter by status: prospect, active, past"),
+    search: str | None = Query(
+        None,
+        description="Search in name, industry, contact name, or email",
+    ),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100, alias="pageSize"),
 ) -> ClientListResponse:
@@ -95,11 +98,10 @@ async def list_clients(
             "hasMore": (page * page_size) < total,
         })
     except Exception as exc:
-        import traceback
-        logger.error(f"Error listing clients: {exc}", exc_info=True)
+        logger.error("Error listing clients", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unable to retrieve clients: {str(exc)}",
+            detail=f"Unable to retrieve clients: {exc}",
         ) from exc
 
 
@@ -159,16 +161,16 @@ async def get_client(
             last_activity=client.last_activity,
             recent_projects=recent_projects,
         )
-    except client_service.ClientNotFoundError:
+    except client_service.ClientNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Client not found.",
-        )
-    except client_service.ClientAccessError:
+        ) from exc
+    except client_service.ClientAccessError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied.",
-        )
+        ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -213,16 +215,16 @@ async def create_client(
             "updatedAt": client.updated_at,
             "lastActivity": client.last_activity,
         })
-    except client_service.ClientAccessError:
+    except client_service.ClientAccessError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to workspace.",
-        )
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
-        )
+        ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -272,21 +274,21 @@ async def update_client(
             "updatedAt": client.updated_at,
             "lastActivity": client.last_activity,
         })
-    except client_service.ClientNotFoundError:
+    except client_service.ClientNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Client not found.",
-        )
-    except client_service.ClientAccessError:
+        ) from exc
+    except client_service.ClientAccessError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied.",
-        )
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
-        )
+        ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -304,21 +306,21 @@ async def delete_client(
     try:
         await client_service.delete_client(session, client_id, current_user.id, soft_delete=True)
         return {"message": "Client deleted successfully"}
-    except client_service.ClientNotFoundError:
+    except client_service.ClientNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Client not found.",
-        )
-    except client_service.ClientAccessError:
+        ) from exc
+    except client_service.ClientAccessError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied.",
-        )
+        ) from exc
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
-        )
+        ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -33,9 +33,9 @@ from app.schemas.auth import (
     UserProfileUpdateRequest,
 )
 from app.schemas.user import UserPublic
-from app.services.google_oauth import GoogleOAuthClient, GoogleOAuthError, GoogleUserInfo
 from app.services import password_reset as password_reset_service
 from app.services.email import EmailRateLimitError, get_email_dispatcher
+from app.services.google_oauth import GoogleOAuthClient, GoogleOAuthError, GoogleUserInfo
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -48,9 +48,12 @@ async def signup(payload: SignupRequest, session: deps.SessionDep) -> Token:
     session.add(user)
     try:
         await session.commit()
-    except IntegrityError:
+    except IntegrityError as exc:
         await session.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already exists")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already exists",
+        ) from exc
     await session.refresh(user)
     access = create_access_token(str(user.id))
     refresh = create_refresh_token(str(user.id))
