@@ -211,12 +211,20 @@ class LLMDocumentScopeGenerator:
             scope = self._parse_scope(raw_content)
             module_count = len(scope.modules) if scope.modules else 0
             feature_count = len(scope.features) if scope.features else 0
-            logger.info("LLM scope generation succeeded with %d modules and %d features.", module_count, feature_count)
+            logger.info(
+                "LLM scope generation succeeded with %d modules and %d features.",
+                module_count,
+                feature_count,
+            )
             return scope
-        except self.ParseError as e:
-            # If JSON parsing fails, log the raw content for debugging
-            logger.error(f"JSON parsing failed. Raw content length: {len(raw_content)} chars")
-            logger.debug(f"Raw content preview (first 5000 chars):\n{raw_content[:5000]}")
+        except self.ParseError as exc:
+            # If JSON parsing fails, log the raw content and error details for debugging
+            logger.error(
+                "JSON parsing failed with error %s. Raw content length: %d chars",
+                exc,
+                len(raw_content),
+            )
+            logger.debug("Raw content preview (first 5000 chars):\n%s", raw_content[:5000])
             # Re-raise to let caller handle (may want to fall back to heuristic parser)
             raise
     
@@ -488,31 +496,51 @@ class LLMDocumentScopeGenerator:
         # Try to parse directly first
         try:
             parsed_data = json.loads(cleaned)
-        except json.JSONDecodeError as e:
-            logger.warning(f"Direct JSON parse failed: {e}. Attempting to fix common JSON issues...")
+        except json.JSONDecodeError as err:
+            logger.warning(
+                "Direct JSON parse failed: %s. Attempting to fix common JSON issues...",
+                err,
+            )
             # Try to fix common JSON issues
             fixed_json = self._fix_json_common_issues(cleaned)
             try:
                 parsed_data = json.loads(fixed_json)
                 logger.info("Successfully parsed JSON after fixing common issues")
-            except json.JSONDecodeError as e2:
-                logger.warning(f"Fixed JSON still invalid: {e2}. Trying to extract JSON block...")
+            except json.JSONDecodeError as err_fixed:
+                logger.warning("Fixed JSON still invalid: %s. Trying to extract JSON block...", err_fixed)
                 # Try to extract JSON block
                 json_candidate = self._extract_json_block(cleaned)
                 if json_candidate is None:
                     # Log the problematic content for debugging (first 2000 chars)
-                    logger.error(f"Failed to extract valid JSON. Content preview (first 2000 chars):\n{cleaned[:2000]}")
-                    logger.error(f"JSON error at line {e.lineno}, column {e.colno}: {e.msg}")
-                    raise self.ParseError(f"LLM response did not contain valid JSON. Error at line {e.lineno}, column {e.colno}: {e.msg}")
+                    logger.error(
+                        "Failed to extract valid JSON. Content preview (first 2000 chars):\n%s",
+                        cleaned[:2000],
+                    )
+                    logger.error(
+                        "JSON error at line %d, column %d: %s",
+                        err.lineno,
+                        err.colno,
+                        err.msg,
+                    )
+                    raise self.ParseError(
+                        f"LLM response did not contain valid JSON. Error at line {err.lineno}, "
+                        f"column {err.colno}: {err.msg}"
+                    ) from err
                 # Try to fix the extracted block too
                 fixed_candidate = self._fix_json_common_issues(json_candidate)
                 try:
                     parsed_data = json.loads(fixed_candidate)
                     logger.info("Successfully parsed extracted JSON block after fixing")
-                except json.JSONDecodeError as e3:
-                    logger.error(f"Extracted JSON block still invalid: {e3}")
-                    logger.error(f"JSON block preview (first 2000 chars):\n{json_candidate[:2000]}")
-                    raise self.ParseError(f"LLM response did not contain valid JSON even after extraction. Error: {e3.msg}")
+                except json.JSONDecodeError as err_candidate:
+                    logger.error("Extracted JSON block still invalid: %s", err_candidate)
+                    logger.error(
+                        "JSON block preview (first 2000 chars):\n%s",
+                        json_candidate[:2000],
+                    )
+                    raise self.ParseError(
+                        "LLM response did not contain valid JSON even after extraction. "
+                        f"Error: {err_candidate.msg}"
+                    ) from err_candidate
         
         # Transform modules.features from objects to strings (feature names)
         if "modules" in parsed_data and isinstance(parsed_data["modules"], list):

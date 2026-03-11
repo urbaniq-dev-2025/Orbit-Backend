@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from typing import Any
 
@@ -82,7 +81,7 @@ class RAGExampleRetriever:
                 self.embeddings_cache[base_name] = embedding
 
                 # Load output JSON
-                with open(output_file, "r", encoding="utf-8") as f:
+                with open(output_file, encoding="utf-8") as f:
                     output_data = json.load(f)
                 self.outputs_cache[base_name] = output_data
 
