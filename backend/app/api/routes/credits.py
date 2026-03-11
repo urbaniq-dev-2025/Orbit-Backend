@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -16,7 +15,7 @@ router = APIRouter()
 async def get_credit_balance(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
 ) -> dict:
     """Get credit balance for a workspace."""
     if not workspace_id:

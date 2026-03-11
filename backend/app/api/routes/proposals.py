@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import uuid
-from typing import List, Optional
+from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
 from app.api import deps
 from app.schemas.proposal import (
@@ -18,7 +18,6 @@ from app.schemas.proposal import (
     ProposalSlidePublic,
     ProposalSlideReorderRequest,
     ProposalSlideUpdate,
-    ProposalStatus,
     ProposalSummary,
     ProposalUpdate,
     ProposalViewRequest,
@@ -42,14 +41,14 @@ def _map_proposal_exception(exc: Exception) -> HTTPException:
     )
 
 
-@router.get("", response_model=List[ProposalSummary])
+@router.get("", response_model=list[ProposalSummary])
 async def list_proposals(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
-    scope_id: Optional[uuid.UUID] = Query(None, alias="scopeId"),
-    status: Optional[str] = Query(None),
-) -> List[ProposalSummary]:
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
+    scope_id: uuid.UUID | None = Query(None, alias="scopeId"),
+    status: str | None = Query(None),
+) -> list[ProposalSummary]:
     """List proposals with filters."""
     try:
         proposal_status = (
@@ -231,12 +230,12 @@ async def get_proposal_analytics(
 # Proposal Slides Endpoints
 
 
-@router.get("/{proposal_id}/slides", response_model=List[ProposalSlidePublic])
+@router.get("/{proposal_id}/slides", response_model=list[ProposalSlidePublic])
 async def list_proposal_slides(
     proposal_id: uuid.UUID,
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-) -> List[ProposalSlidePublic]:
+) -> list[ProposalSlidePublic]:
     """List all slides for a proposal."""
     try:
         slides = await proposal_service.list_proposal_slides(

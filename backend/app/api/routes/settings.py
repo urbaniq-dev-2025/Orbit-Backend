@@ -6,9 +6,9 @@ from __future__ import annotations
 
 import datetime as dt
 import uuid
-from typing import List, Optional
+from typing import Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, Response, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import select, desc, func
 
 from app.api import deps

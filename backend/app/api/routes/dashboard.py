@@ -1,8 +1,7 @@
 from __future__ import annotations
 
+from datetime import date, datetime, time, timedelta, timezone
 import uuid
-from datetime import date
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -22,7 +21,7 @@ router = APIRouter()
 async def get_dashboard_stats(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
 ) -> DashboardStatsResponse:
     """Get dashboard statistics."""
     try:
@@ -42,7 +41,7 @@ async def get_dashboard_stats(
 async def get_pipeline_data(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
 ) -> PipelineData:
     """Get pipeline data grouped by status for scopes, projects, quotations, and proposals."""
     try:
@@ -61,7 +60,7 @@ async def get_pipeline_data(
 async def get_recent_activity(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
     limit: int = Query(10, ge=1, le=50),
 ) -> RecentActivityResponse:
     """Get recent activity items (scopes, projects, PRDs)."""
@@ -81,7 +80,7 @@ async def get_recent_activity(
 async def get_urgent_items(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
     days: int = Query(7, ge=1, le=30),
 ) -> UrgentItemsResponse:
     """Get urgent items (PRDs with approaching due dates)."""
@@ -101,7 +100,7 @@ async def get_urgent_items(
 async def get_active_clients(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
     limit: int = Query(10, ge=1, le=50),
 ) -> dict:
     """Get active clients list for dashboard."""
@@ -121,7 +120,7 @@ async def get_active_clients(
 async def get_active_projects(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
     limit: int = Query(10, ge=1, le=50),
 ) -> dict:
     """Get active projects list for dashboard."""
@@ -141,18 +140,16 @@ async def get_active_projects(
 async def get_calendar_events(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
-    start_date: Optional[date] = Query(None, alias="startDate"),
-    end_date: Optional[date] = Query(None, alias="endDate"),
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
+    start_date: date | None = Query(None, alias="startDate"),
+    end_date: date | None = Query(None, alias="endDate"),
 ) -> dict:
     """Get calendar events (reminders) for dashboard."""
     try:
         from app.services import reminders as reminder_service
-        from datetime import date, timedelta
         from app.core.logging import get_logger
-        
+
         logger = get_logger(__name__)
-        
         # If no date range provided, default to wider range (3 months back, 3 months forward)
         if not start_date:
             today = date.today()
@@ -183,7 +180,6 @@ async def get_calendar_events(
                 time_str = reminder.time.strftime("%H:%M")
             
             # Combine date and time for full datetime
-            from datetime import datetime, time, timezone
             event_datetime = datetime.combine(reminder.date, reminder.time or time(0, 0))
             event_datetime = event_datetime.replace(tzinfo=timezone.utc)
             
@@ -216,7 +212,7 @@ async def get_calendar_events(
 async def get_pipeline_metrics(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
 ) -> dict:
     """Get pipeline metrics for dashboard."""
     # TODO: Implement pipeline metrics when needed

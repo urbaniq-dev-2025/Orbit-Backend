@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Optional
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
@@ -332,7 +332,7 @@ async def delete_client(
 async def get_client_stats(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
 ) -> ClientStatsResponse:
     """Get client statistics."""
     try:
@@ -460,14 +460,14 @@ async def upload_client_logo(
             )
 
         # Validate file size (5MB max)
-        MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+        max_file_size = 5 * 1024 * 1024  # 5MB
         file_content = await file.read()
         file_size = len(file_content)
 
-        if file_size > MAX_FILE_SIZE:
+        if file_size > max_file_size:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"File size exceeds maximum of {MAX_FILE_SIZE // (1024 * 1024)}MB",
+                detail=f"File size exceeds maximum of {max_file_size // (1024 * 1024)}MB",
             )
 
         # TODO: Upload file to storage (S3, Cloudinary, etc.)
@@ -477,9 +477,6 @@ async def upload_client_logo(
         # 2. Upload to storage service
         # 3. Get public URL
         # 4. Update client logo_url
-
-        import os
-        from pathlib import Path
 
         # Placeholder: Save to local storage (for development)
         # In production, use S3 or similar
@@ -502,16 +499,16 @@ async def upload_client_logo(
         )
 
         return ClientLogoResponse(logo_url=client.logo_url)
-    except client_service.ClientNotFoundError:
+    except client_service.ClientNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Client not found.",
-        )
-    except client_service.ClientAccessError:
+        ) from exc
+    except client_service.ClientAccessError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied.",
-        )
+        ) from exc
     except HTTPException:
         raise
     except Exception as exc:

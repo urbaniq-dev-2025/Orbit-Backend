@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select
@@ -42,14 +42,14 @@ def _map_project_exception(exc: Exception) -> HTTPException:
 async def list_projects(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
-    status: Optional[str] = Query(None),
-    page_size: Optional[int] = Query(None, alias="pageSize"),
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
+    status: str | None = Query(None),
+    page_size: int | None = Query(None, alias="pageSize"),
 ) -> ProjectListResponse:
     """List projects with filters and statistics."""
     try:
         # ProjectStatus is a Literal type, so we can pass the string directly if valid
-        project_status: Optional[ProjectStatus] = None
+        project_status: ProjectStatus | None = None
         if status and status in ["active", "archived", "completed", "on_hold"]:
             project_status = status  # type: ignore
         
@@ -187,7 +187,7 @@ async def update_project_progress(
         )
         return await _build_project_detail(session, project)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except Exception as exc:
         raise _map_project_exception(exc) from exc
 
@@ -206,7 +206,7 @@ async def assign_project_team(
         )
         return await _build_project_detail(session, project)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except Exception as exc:
         raise _map_project_exception(exc) from exc
 

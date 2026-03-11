@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
@@ -34,14 +34,14 @@ def _map_quotation_exception(exc: Exception) -> HTTPException:
     )
 
 
-@router.get("", response_model=List[QuotationSummary])
+@router.get("", response_model=list[QuotationSummary])
 async def list_quotations(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
-    scope_id: Optional[uuid.UUID] = Query(None, alias="scopeId"),
-    status: Optional[str] = Query(None),
-) -> List[QuotationSummary]:
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
+    scope_id: uuid.UUID | None = Query(None, alias="scopeId"),
+    status: str | None = Query(None),
+) -> list[QuotationSummary]:
     """List quotations with filters."""
     try:
         quotation_status = (
