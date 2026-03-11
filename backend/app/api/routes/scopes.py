@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
 from sqlalchemy import func, select
@@ -52,12 +52,12 @@ def _map_scope_exception(exc: Exception) -> HTTPException:
 async def list_scopes(
     session: deps.SessionDep,
     current_user=Depends(deps.get_current_user),
-    workspace_id: Optional[uuid.UUID] = Query(None, alias="workspaceId"),
-    project_id: Optional[uuid.UUID] = Query(None, alias="projectId"),
-    client_id: Optional[uuid.UUID] = Query(None, alias="clientId"),
-    status: Optional[str] = Query(None),
-    search: Optional[str] = Query(None),
-    is_favourite: Optional[bool] = Query(None, alias="isFavourite"),
+    workspace_id: uuid.UUID | None = Query(None, alias="workspaceId"),
+    project_id: uuid.UUID | None = Query(None, alias="projectId"),
+    client_id: uuid.UUID | None = Query(None, alias="clientId"),
+    status: str | None = Query(None),
+    search: str | None = Query(None),
+    is_favourite: bool | None = Query(None, alias="isFavourite"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100, alias="pageSize"),
 ) -> ScopeListResponse:
@@ -335,8 +335,8 @@ async def update_scope(
     current_user=Depends(deps.get_current_user),
 ) -> ScopeDetail:
     """Update a scope."""
-    try:
-        # Parse request body to handle status field conversion
+        try:
+            # Parse request body to handle status field conversion
         body_data = await request.json()
         
         # Convert camelCase status to snake_case if needed
@@ -372,8 +372,8 @@ async def update_scope(
         scope = await scope_service.get_scope(session, scope_id, current_user.id, include_sections=True)
         
         return await _build_scope_detail(session, scope, current_user.id)
-    except HTTPException:
-        raise
+        except HTTPException:
+            raise
     except Exception as exc:
         # Log the actual exception for debugging
         from app.core.logging import get_logger
@@ -696,14 +696,14 @@ async def upload_scope_document(
             )
 
         # Validate file size (50MB max)
-        MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+        max_file_size = 50 * 1024 * 1024  # 50MB
         file_content = await file.read()
         file_size = len(file_content)
 
-        if file_size > MAX_FILE_SIZE:
+        if file_size > max_file_size:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"File size exceeds maximum of {MAX_FILE_SIZE // (1024 * 1024)}MB",
+                detail=f"File size exceeds maximum of {max_file_size // (1024 * 1024)}MB",
             )
 
         # TODO: Upload file to storage (S3, local filesystem, etc.)
@@ -714,7 +714,6 @@ async def upload_scope_document(
         # 3. Get file URL
         # 4. Store in Document model
 
-        import os
         from pathlib import Path
 
         # Placeholder: Save to local storage (for development)
@@ -899,12 +898,15 @@ async def get_scope_document(
                 "scopeId": str(scope_id),
                 "document": scope_document,
             }
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse scope document JSON for scope {scope_id}: {e}")
+        except json.JSONDecodeError as exc:
+            from app.core.logging import get_logger
+
+            logger = get_logger(__name__)
+            logger.error("Failed to parse scope document JSON for scope %s: %s", scope_id, exc)
             raise HTTPException(
                 status_code=500,
-                detail="Scope document is corrupted and cannot be parsed."
-            )
+                detail="Scope document is corrupted and cannot be parsed.",
+            ) from exc
         
     except HTTPException:
         raise
@@ -1016,12 +1018,17 @@ async def _build_scope_detail(session, scope: Scope, user_id: uuid.UUID) -> Scop
                     if client:
                         client_id = client.id
                         client_name = client.name
-        except Exception as e:
-            # If eager loading didn't work, fetch project separately
-            from app.models import Project, Client
-            from app.core.logging import get_logger
-            logger = get_logger(__name__)
-            logger.warning(f"Failed to access project eagerly for scope {scope.id}: {e}")
+            except Exception as exc:
+                # If eager loading didn't work, fetch project separately
+                from app.core.logging import get_logger
+                from app.models import Client, Project
+
+                logger = get_logger(__name__)
+                logger.warning(
+                    "Failed to access project eagerly for scope %s: %s",
+                    scope.id,
+                    exc,
+                )
             project_stmt = select(Project).where(Project.id == scope.project_id)
             project_result = await session.execute(project_stmt)
             project = project_result.scalar_one_or_none()
